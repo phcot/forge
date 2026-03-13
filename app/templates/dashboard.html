@@ -65,9 +65,11 @@
 {% endif %}
 
 {% if active_tasks %}
-  <div class="space-y-2 mb-8" id="task-list">
+  <div class="space-y-2 mb-8 drop-zone min-h-8" id="task-list" data-section="active">
     {% for task in active_tasks %}
       <div class="task-card rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+           draggable="true"
+           data-task-id="{{ task.id }}"
            data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
            style="background:#0f172a;border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};">
         <div class="flex items-start justify-between gap-2">
@@ -119,11 +121,55 @@
     {% endfor %}
   </div>
 {% else %}
-  <div class="text-center py-12 text-sm" style="color:#475569;">
-    No active tasks.
-    <a href="/task/new" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'"> Add one?</a>
+  <div id="active-drop-empty" class="drop-zone rounded-xl py-8 text-center text-sm" data-section="active"
+       style="color:#475569;border:2px dashed #1e293b;">
+    No active tasks — drag one up from the backlog, or
+    <a href="/task/new" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">add one</a>.
   </div>
 {% endif %}
+
+<!-- Backlog section -->
+<div class="mt-8 mb-3 flex items-center justify-between">
+  <h2 class="font-semibold" style="color:#64748b;">Backlog</h2>
+  <span class="text-xs" style="color:#334155;">{{ backlog_tasks|length }} task{{ 's' if backlog_tasks|length != 1 }}</span>
+</div>
+
+<div id="backlog-list" class="drop-zone space-y-2 mb-8 min-h-16 rounded-xl" data-section="backlog"
+     style="{% if not backlog_tasks %}border:2px dashed #1e293b;padding:2rem 1rem;{% endif %}">
+  {% if backlog_tasks %}
+    {% for task in backlog_tasks %}
+      <div class="task-card rounded-xl px-4 py-3 transition"
+           draggable="true"
+           data-task-id="{{ task.id }}"
+           data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
+           style="background:#0a0f1a;border:1px solid #1e293b;opacity:0.8;">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              {{ priority_dot(task.priority) }}
+              <a href="/task/{{ task.id }}" class="font-medium transition truncate"
+                 style="color:#94a3b8;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#94a3b8'">{{ task.title }}</a>
+              {{ status_badge(task.status) }}
+              <span class="text-xs" style="color:#334155;">{{ task.size }}</span>
+              {% if task.product_area %}
+                <span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f172a;color:#475569;">{{ task.product_area }}</span>
+              {% endif %}
+            </div>
+            {% if task.deadline %}
+              <div class="text-xs mt-1" style="color:#334155;">Due {{ task.deadline.strftime('%b %d') }}</div>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <a href="/task/{{ task.id }}/edit" class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e293b;color:#64748b;"
+               onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#64748b'">Edit</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-sm" style="color:#334155;">Drop tasks here to park them for later.</div>
+  {% endif %}
+</div>
 
 <!-- Completed today -->
 {% if completed_today %}
@@ -151,10 +197,10 @@
 {% block scripts %}
 <script>
 (function() {
+  // ── Category filter pills ──────────────────────────────────────
   const cards = document.querySelectorAll('.task-card');
   const pills = document.querySelectorAll('.category-pill');
 
-  // Show only pills that have matching tasks
   const presentCats = new Set();
   cards.forEach(c => { if (c.dataset.category) presentCats.add(c.dataset.category); });
   pills.forEach(p => {
@@ -184,6 +230,49 @@
         } else {
           card.style.display = 'none';
         }
+      });
+    });
+  });
+
+  // ── Drag and drop between Active and Backlog ───────────────────
+  let draggedCard = null;
+
+  document.querySelectorAll('.task-card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      draggedCard = card;
+      setTimeout(() => card.style.opacity = '0.4', 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      if (draggedCard) draggedCard.style.opacity = '';
+      draggedCard = null;
+      document.querySelectorAll('.drop-zone').forEach(z => z.style.outline = '');
+    });
+  });
+
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.style.outline = '2px dashed #6366f1';
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) zone.style.outline = '';
+    });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.style.outline = '';
+      if (!draggedCard) return;
+      const section = zone.dataset.section;
+      const taskId = draggedCard.dataset.taskId;
+      if (!section || !taskId) return;
+
+      fetch(`/task/${taskId}/move`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({section})
+      }).then(r => r.json()).then(data => {
+        if (data.ok) location.reload();
       });
     });
   });

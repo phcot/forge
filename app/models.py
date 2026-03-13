@@ -28,6 +28,7 @@ class Task(db.Model):
     updated_at = db.Column(db.DateTime, default=now_eastern, onupdate=now_eastern)
     completed_at = db.Column(db.DateTime, nullable=True)
     sort_order = db.Column(db.Integer, default=0)
+    is_backlog = db.Column(db.Boolean, default=False)
 
     messages = db.relationship('ChatMessage', backref='task', lazy=True,
                                foreign_keys='ChatMessage.task_id',

@@ -42,19 +42,24 @@ def dashboard():
     checkin = DailyCheckIn.query.filter_by(date=today).first()
 
     active_statuses = ['in_progress', 'not_started', 'blocked']
+    status_order = db.case(
+        (Task.status == 'in_progress', 0),
+        (Task.status == 'not_started', 1),
+        (Task.status == 'blocked', 2),
+        else_=3
+    )
+
     active_tasks = (
         Task.query
-        .filter(Task.status.in_(active_statuses))
-        .order_by(
-            db.case(
-                (Task.status == 'in_progress', 0),
-                (Task.status == 'not_started', 1),
-                (Task.status == 'blocked', 2),
-                else_=3
-            ),
-            Task.sort_order,
-            Task.created_at
-        )
+        .filter(Task.status.in_(active_statuses), Task.is_backlog == False)
+        .order_by(status_order, Task.sort_order, Task.created_at)
+        .all()
+    )
+
+    backlog_tasks = (
+        Task.query
+        .filter(Task.status.in_(active_statuses), Task.is_backlog == True)
+        .order_by(status_order, Task.sort_order, Task.created_at)
         .all()
     )
 
@@ -71,6 +76,7 @@ def dashboard():
         'dashboard.html',
         checkin=checkin,
         active_tasks=active_tasks,
+        backlog_tasks=backlog_tasks,
         completed_today=completed_today,
         today=today
     )
@@ -90,6 +96,21 @@ def quick_status(task_id):
             task.completed_at = None
         db.session.commit()
     return redirect(url_for('main.dashboard'))
+
+
+@main_bp.route('/task/<int:task_id>/move', methods=['POST'])
+@login_required
+def move_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    section = request.json.get('section')
+    if section == 'backlog':
+        task.is_backlog = True
+    elif section == 'active':
+        task.is_backlog = False
+    else:
+        return jsonify({'error': 'Invalid section'}), 400
+    db.session.commit()
+    return jsonify({'ok': True})
 
 
 @main_bp.route('/archive')

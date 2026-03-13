@@ -22,6 +22,72 @@ def get_learning_context():
     return ctx.content if ctx and ctx.content else ''
 
 
+CREATE_TASK_TOOL = {
+    "name": "create_task",
+    "description": "Create a new task in the user's task list.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "Short, clear task title."
+            },
+            "description": {
+                "type": "string",
+                "description": "Optional longer description of the task."
+            },
+            "priority": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "critical"],
+                "description": "Task priority. Default: medium."
+            },
+            "size": {
+                "type": "string",
+                "enum": ["S", "M", "L"],
+                "description": "Effort size estimate. Default: M."
+            },
+            "product_area": {
+                "type": "string",
+                "description": "Category/area. E.g. 'Career: PRD-LIMCA', 'Home: Maintenance', 'Family'."
+            },
+            "deadline": {
+                "type": "string",
+                "description": "Optional deadline in YYYY-MM-DD format."
+            },
+            "work_location": {
+                "type": "string",
+                "enum": ["remote", "office", "hybrid"],
+                "description": "Where the task can be done. Default: hybrid."
+            }
+        },
+        "required": ["title"]
+    }
+}
+
+
+def execute_create_task(args):
+    from datetime import datetime as dt
+    from app.models import Task
+    deadline = None
+    if args.get('deadline'):
+        try:
+            deadline = dt.strptime(args['deadline'], '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    task = Task(
+        title=args['title'],
+        description=args.get('description', ''),
+        priority=args.get('priority', 'medium'),
+        size=args.get('size', 'M'),
+        product_area=args.get('product_area', ''),
+        deadline=deadline,
+        work_location=args.get('work_location', 'hybrid'),
+    )
+    db.session.add(task)
+    db.session.commit()
+    return f"Task created: '{task.title}' (id={task.id})"
+
+
 def build_general_system_prompt():
     today = date.today()
     checkin = DailyCheckIn.query.filter_by(date=today).first()
@@ -59,7 +125,8 @@ Rules:
 - When I say "stuck", help me break it down or suggest timeboxing
 - When I say "how am I doing", give me a completed vs remaining tally
 - If I'm avoiding something, gently call it out
-- Be warm but direct. Think coach, not assistant."""
+- Be warm but direct. Think coach, not assistant.
+- You can create tasks directly. When the user asks you to add something to their task list, use the create_task tool to do it immediately, then confirm it was added."""
 
 
 def build_task_system_prompt(task):
@@ -127,20 +194,54 @@ def send_general_message():
     def generate():
         client = get_anthropic_client()
         full_response = ''
+
         with client.messages.stream(
             model=MODEL,
             max_tokens=1024,
             system=system_prompt,
-            messages=messages
+            messages=messages,
+            tools=[CREATE_TASK_TOOL]
         ) as stream:
             for text in stream.text_stream:
                 full_response += text
                 yield f"data: {json.dumps({'text': text})}\n\n"
+            final_msg = stream.get_final_message()
 
-        assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
-        db.session.add(assistant_msg)
-        db.session.commit()
-        yield f"data: {json.dumps({'done': True})}\n\n"
+        if final_msg.stop_reason == 'tool_use':
+            tool_block = next(b for b in final_msg.content if b.type == 'tool_use')
+            tool_result = execute_create_task(tool_block.input)
+
+            # Build follow-up conversation with tool result
+            follow_up_messages = messages + [
+                {'role': 'assistant', 'content': final_msg.content},
+                {'role': 'user', 'content': [
+                    {'type': 'tool_result', 'tool_use_id': tool_block.id, 'content': tool_result}
+                ]}
+            ]
+
+            confirmation = ''
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=512,
+                system=system_prompt,
+                messages=follow_up_messages,
+                tools=[CREATE_TASK_TOOL]
+            ) as stream2:
+                for text in stream2.text_stream:
+                    confirmation += text
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+
+            # Save the full exchange: assistant tool call + confirmation
+            tool_call_summary = f"[Created task: {tool_block.input.get('title', '')}]\n" + confirmation
+            assistant_msg = ChatMessage(task_id=None, role='assistant', content=tool_call_summary)
+            db.session.add(assistant_msg)
+            db.session.commit()
+            yield f"data: {json.dumps({'done': True, 'task_created': True})}\n\n"
+        else:
+            assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
+            db.session.add(assistant_msg)
+            db.session.commit()
+            yield f"data: {json.dumps({'done': True})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
