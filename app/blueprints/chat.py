@@ -8,7 +8,7 @@ import json
 
 chat_bp = Blueprint('chat', __name__)
 
-MODEL = 'claude-opus-4-5'
+MODEL = 'claude-opus-4-6'
 
 
 def get_anthropic_client():
