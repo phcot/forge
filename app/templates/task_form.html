@@ -87,9 +87,33 @@
     </div>
     <div>
       <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Product Area</label>
-      <input type="text" name="product_area" value="{{ task.product_area if task else '' }}"
-        placeholder="e.g. LIMCA 3, Personal"
-        class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+      <select name="product_area" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        <option value="">— select —</option>
+        <optgroup label="Career">
+          <option value="Career: PLM-METAL" {% if task and task.product_area == 'Career: PLM-METAL' %}selected{% endif %}>PLM-METAL</option>
+          <option value="Career: PRJ-ALNEXT2" {% if task and task.product_area == 'Career: PRJ-ALNEXT2' %}selected{% endif %}>PRJ-ALNEXT2</option>
+          <option value="Career: PRD-ALSCAN" {% if task and task.product_area == 'Career: PRD-ALSCAN' %}selected{% endif %}>PRD-ALSCAN</option>
+          <option value="Career: PRD-LIMCA" {% if task and task.product_area == 'Career: PRD-LIMCA' %}selected{% endif %}>PRD-LIMCA</option>
+          <option value="Career: PRD-PREFIL/PODFA" {% if task and task.product_area == 'Career: PRD-PREFIL/PODFA' %}selected{% endif %}>PRD-PREFIL/PODFA</option>
+          <option value="Career: SYST-ENG-ADMIN" {% if task and task.product_area == 'Career: SYST-ENG-ADMIN' %}selected{% endif %}>SYST-ENG-ADMIN</option>
+        </optgroup>
+        <optgroup label="Enterprises">
+          <option value="Enterprises: Rudbeckie" {% if task and task.product_area == 'Enterprises: Rudbeckie' %}selected{% endif %}>Rudbeckie Farms</option>
+          <option value="Enterprises: Personal" {% if task and task.product_area == 'Enterprises: Personal' %}selected{% endif %}>Personal Projects</option>
+        </optgroup>
+        <optgroup label="Home">
+          <option value="Home: Maintenance" {% if task and task.product_area == 'Home: Maintenance' %}selected{% endif %}>Maintenance</option>
+          <option value="Home: Renovation" {% if task and task.product_area == 'Home: Renovation' %}selected{% endif %}>Renovation</option>
+        </optgroup>
+        <optgroup label="Family">
+          <option value="Family" {% if task and task.product_area == 'Family' %}selected{% endif %}>Family Logistics</option>
+        </optgroup>
+        <optgroup label="Growth &amp; Admin">
+          <option value="Growth & Admin: Finance" {% if task and task.product_area == 'Growth & Admin: Finance' %}selected{% endif %}>Finance</option>
+          <option value="Growth & Admin: Education" {% if task and task.product_area == 'Growth & Admin: Education' %}selected{% endif %}>Education</option>
+          <option value="Growth & Admin: Life Admin" {% if task and task.product_area == 'Growth & Admin: Life Admin' %}selected{% endif %}>Life Admin</option>
+        </optgroup>
+      </select>
     </div>
   </div>
 

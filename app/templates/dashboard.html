@@ -52,10 +52,23 @@
      onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">+ New task</a>
 </div>
 
+<!-- Category filter pills -->
 {% if active_tasks %}
-  <div class="space-y-2 mb-8">
+<div class="flex flex-wrap gap-2 mb-4" id="category-filters">
+  <button class="category-pill text-xs px-3 py-1 rounded-full font-medium" data-category="all"
+          style="background:#312e81;color:#a5b4fc;border:1px solid #4338ca;">All</button>
+  {% for cat in ['Career', 'Enterprises', 'Home', 'Family', 'Growth & Admin'] %}
+    <button class="category-pill text-xs px-3 py-1 rounded-full font-medium hidden" data-category="{{ cat }}"
+            style="background:#1e293b;color:#64748b;border:1px solid #334155;">{{ cat }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if active_tasks %}
+  <div class="space-y-2 mb-8" id="task-list">
     {% for task in active_tasks %}
-      <div class="rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+      <div class="task-card rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+           data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
            style="background:#0f172a;border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
@@ -136,6 +149,46 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function() {
+  const cards = document.querySelectorAll('.task-card');
+  const pills = document.querySelectorAll('.category-pill');
+
+  // Show only pills that have matching tasks
+  const presentCats = new Set();
+  cards.forEach(c => { if (c.dataset.category) presentCats.add(c.dataset.category); });
+  pills.forEach(p => {
+    if (p.dataset.category === 'all' || presentCats.has(p.dataset.category)) {
+      p.classList.remove('hidden');
+    }
+  });
+
+  function setActive(pill) {
+    pills.forEach(p => {
+      p.style.background = '#1e293b';
+      p.style.color = '#64748b';
+      p.style.borderColor = '#334155';
+    });
+    pill.style.background = '#312e81';
+    pill.style.color = '#a5b4fc';
+    pill.style.borderColor = '#4338ca';
+  }
+
+  pills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const cat = pill.dataset.category;
+      setActive(pill);
+      cards.forEach(card => {
+        if (cat === 'all' || card.dataset.category === cat) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+})();
+</script>
 <a href="/chat" class="fixed bottom-6 right-6 rounded-full shadow-2xl w-14 h-14 flex items-center justify-center transition z-50"
    style="background:#4f46e5;box-shadow:0 0 20px rgba(99,102,241,0.4);"
    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'"
