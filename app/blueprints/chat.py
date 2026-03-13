@@ -8,7 +8,7 @@ import json
 
 chat_bp = Blueprint('chat', __name__)
 
-MODEL = 'claude-sonnet-4-20250514'
+MODEL = 'claude-opus-4-5'
 
 
 def get_anthropic_client():
@@ -194,56 +194,60 @@ def send_general_message():
     def generate():
         client = get_anthropic_client()
         full_response = ''
-
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=1024,
-            system=system_prompt,
-            messages=messages,
-            tools=[CREATE_TASK_TOOL]
-        ) as stream:
-            for text in stream.text_stream:
-                full_response += text
-                yield f"data: {json.dumps({'text': text})}\n\n"
-            final_msg = stream.get_final_message()
-
-        if final_msg.stop_reason == 'tool_use':
-            tool_block = next(b for b in final_msg.content if b.type == 'tool_use')
-            tool_result = execute_create_task(tool_block.input)
-
-            # Build follow-up conversation with tool result
-            follow_up_messages = messages + [
-                {'role': 'assistant', 'content': final_msg.content},
-                {'role': 'user', 'content': [
-                    {'type': 'tool_result', 'tool_use_id': tool_block.id, 'content': tool_result}
-                ]}
-            ]
-
-            confirmation = ''
+        try:
             with client.messages.stream(
                 model=MODEL,
-                max_tokens=512,
+                max_tokens=1024,
                 system=system_prompt,
-                messages=follow_up_messages,
+                messages=messages,
                 tools=[CREATE_TASK_TOOL]
-            ) as stream2:
-                for text in stream2.text_stream:
-                    confirmation += text
+            ) as stream:
+                for text in stream.text_stream:
+                    full_response += text
                     yield f"data: {json.dumps({'text': text})}\n\n"
+                final_msg = stream.get_final_message()
 
-            # Save the full exchange: assistant tool call + confirmation
-            tool_call_summary = f"[Created task: {tool_block.input.get('title', '')}]\n" + confirmation
-            assistant_msg = ChatMessage(task_id=None, role='assistant', content=tool_call_summary)
-            db.session.add(assistant_msg)
-            db.session.commit()
-            yield f"data: {json.dumps({'done': True, 'task_created': True})}\n\n"
-        else:
-            assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
-            db.session.add(assistant_msg)
-            db.session.commit()
+            if final_msg.stop_reason == 'tool_use':
+                tool_block = next(b for b in final_msg.content if b.type == 'tool_use')
+                tool_result = execute_create_task(tool_block.input)
+
+                follow_up_messages = messages + [
+                    {'role': 'assistant', 'content': final_msg.content},
+                    {'role': 'user', 'content': [
+                        {'type': 'tool_result', 'tool_use_id': tool_block.id, 'content': tool_result}
+                    ]}
+                ]
+
+                confirmation = ''
+                with client.messages.stream(
+                    model=MODEL,
+                    max_tokens=512,
+                    system=system_prompt,
+                    messages=follow_up_messages,
+                    tools=[CREATE_TASK_TOOL]
+                ) as stream2:
+                    for text in stream2.text_stream:
+                        confirmation += text
+                        yield f"data: {json.dumps({'text': text})}\n\n"
+
+                tool_call_summary = f"[Created task: {tool_block.input.get('title', '')}]\n" + confirmation
+                assistant_msg = ChatMessage(task_id=None, role='assistant', content=tool_call_summary)
+                db.session.add(assistant_msg)
+                db.session.commit()
+                yield f"data: {json.dumps({'done': True, 'task_created': True})}\n\n"
+            else:
+                assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
+                db.session.add(assistant_msg)
+                db.session.commit()
+                yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'text': f'[Error: {str(e)}]'})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
 
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 
 @chat_bp.route('/chat/task/<int:task_id>/send', methods=['POST'])
@@ -270,22 +274,28 @@ def send_task_message(task_id):
     def generate():
         client = get_anthropic_client()
         full_response = ''
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=1024,
-            system=system_prompt,
-            messages=messages
-        ) as stream:
-            for text in stream.text_stream:
-                full_response += text
-                yield f"data: {json.dumps({'text': text})}\n\n"
+        try:
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=1024,
+                system=system_prompt,
+                messages=messages
+            ) as stream:
+                for text in stream.text_stream:
+                    full_response += text
+                    yield f"data: {json.dumps({'text': text})}\n\n"
 
-        assistant_msg = ChatMessage(task_id=task_id, role='assistant', content=full_response)
-        db.session.add(assistant_msg)
-        db.session.commit()
+            assistant_msg = ChatMessage(task_id=task_id, role='assistant', content=full_response)
+            db.session.add(assistant_msg)
+            db.session.commit()
+        except Exception as e:
+            yield f"data: {json.dumps({'text': f'[Error: {str(e)}]'})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
 
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 
 @chat_bp.route('/chat/clear', methods=['POST'])
