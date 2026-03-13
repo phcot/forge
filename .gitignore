@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment variables
+.env
+*.env
+
+# Flask / SQLite
+instance/
+cockpit.db
+*.sqlite3
+
+# Flask-Migrate (keep migrations/ but ignore pycache inside)
+migrations/__pycache__/
+
+# Distribution / packaging
+.eggs/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Images / screenshots (local dev assets)
+*.PNG
+*.png
+*.jpg
+*.jpeg
+
+# Build artifacts
+*.mo
+*.pot

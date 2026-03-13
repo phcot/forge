@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Cockpit{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #080b14; color: #e2e8f0; }
+
+    /* Glow animation for in-progress tasks */
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 6px 1px rgba(99,102,241,0.35), inset 0 0 0 1px rgba(99,102,241,0.4); }
+      50%       { box-shadow: 0 0 18px 4px rgba(99,102,241,0.6), inset 0 0 0 1px rgba(99,102,241,0.7); }
+    }
+    .in-progress-glow {
+      animation: glow-pulse 2.4s ease-in-out infinite;
+      border-color: rgba(99,102,241,0.6) !important;
+    }
+
+    /* Markdown prose inside chat bubbles */
+    .chat-prose p  { margin-bottom: 0.4rem; }
+    .chat-prose p:last-child { margin-bottom: 0; }
+    .chat-prose ul { list-style: disc; padding-left: 1.2rem; margin-bottom: 0.4rem; }
+    .chat-prose ol { list-style: decimal; padding-left: 1.2rem; margin-bottom: 0.4rem; }
+    .chat-prose li { margin-bottom: 0.15rem; }
+    .chat-prose h1,.chat-prose h2,.chat-prose h3 { font-weight: 600; margin: 0.6rem 0 0.3rem; }
+    .chat-prose h3 { font-size: 0.875rem; }
+    .chat-prose pre { background: #1e293b; padding: 0.6rem 0.75rem; border-radius: 0.4rem; overflow-x: auto; margin-bottom: 0.4rem; font-size: 0.8rem; border: 1px solid #334155; }
+    .chat-prose code { background: #1e293b; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.8rem; }
+    .chat-prose pre code { background: transparent; padding: 0; }
+    .chat-prose strong { font-weight: 600; color: #f1f5f9; }
+    .chat-prose a { color: #818cf8; text-decoration: underline; }
+    .chat-prose blockquote { border-left: 3px solid #4f46e5; padding-left: 0.75rem; color: #94a3b8; margin: 0.4rem 0; }
+    .chat-prose hr { border-color: #334155; margin: 0.75rem 0; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Input base */
+    input, textarea, select {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+    input::placeholder, textarea::placeholder { color: #64748b !important; }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.5) !important;
+      border-color: #6366f1 !important;
+    }
+    select option { background: #1e293b; color: #e2e8f0; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Nav -->
+  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;" class="px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <a href="/" class="font-bold text-lg tracking-tight" style="color:#818cf8;">Cockpit</a>
+    <div class="flex items-center gap-4 text-sm">
+      <a href="/checkin" class="text-slate-400 hover:text-slate-200 transition">Check-in</a>
+      <a href="/task/new" class="text-slate-400 hover:text-slate-200 transition">+ Task</a>
+      <a href="/archive" class="text-slate-400 hover:text-slate-200 transition">Archive</a>
+      <a href="/learning" class="text-slate-400 hover:text-slate-200 transition">Insights</a>
+      <a href="/chat" class="text-slate-400 hover:text-slate-200 transition">Chat</a>
+      <a href="/logout" class="text-slate-600 hover:text-slate-400 transition">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="max-w-3xl mx-auto px-4 pt-3">
+        {% for msg in messages %}
+          <div class="px-4 py-2 rounded-lg text-sm mb-2" style="background:#2d1b1b;border:1px solid #7f1d1d;color:#fca5a5;">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

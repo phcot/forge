@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Archive — Cockpit{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-bold" style="color:#e2e8f0;">Archive</h1>
+  <span class="text-sm" style="color:#475569;">{{ tasks|length }} tasks</span>
+</div>
+
+<!-- Search -->
+<form method="GET" class="mb-5 flex gap-2">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search tasks..."
+    class="flex-1 border rounded-xl px-3 py-2.5 text-sm" />
+  <button type="submit" class="rounded-xl px-4 py-2 text-sm font-medium transition"
+    style="background:#4f46e5;color:white;"
+    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">Search</button>
+  {% if q %}
+    <a href="/archive" class="rounded-xl px-3 py-2 text-sm border transition flex items-center"
+       style="border-color:#334155;color:#64748b;"
+       onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#64748b'">Clear</a>
+  {% endif %}
+</form>
+
+<!-- Synthesize insights button -->
+<div id="synthesize-area" class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-sm font-semibold mb-0.5" style="color:#a5b4fc;">Job Insights</div>
+      <div class="text-xs" style="color:#475569;">
+        Analyze completed tasks to build an evolving picture of your role and working patterns.
+        This context is automatically included in all AI coaching conversations.
+      </div>
+    </div>
+    <button id="synthesize-btn" onclick="runSynthesis()"
+      class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+      style="background:#312e81;color:#a5b4fc;"
+      onmouseover="this.style.background='#3730a3'" onmouseout="this.style.background='#312e81'">
+      ✦ Synthesize
+    </button>
+  </div>
+  <div id="synthesis-result" class="mt-3 text-xs hidden" style="color:#64748b;">
+    <a href="/learning" style="color:#6366f1;">View current insights →</a>
+  </div>
+</div>
+
+{% if tasks %}
+  <div class="rounded-xl overflow-hidden" style="background:#0f172a;border:1px solid #1e293b;">
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="border-bottom:1px solid #1e293b;">
+          <th class="text-left px-4 py-2.5 text-xs font-semibold tracking-wider" style="color:#475569;">Task</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold tracking-wider hidden sm:table-cell" style="color:#475569;">Area</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold tracking-wider hidden sm:table-cell" style="color:#475569;">Status</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold tracking-wider" style="color:#475569;">Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+          <tr style="border-bottom:1px solid #0f172a;" class="transition" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+            <td class="px-4 py-3">
+              <a href="/task/{{ task.id }}" class="font-medium transition" style="color:#cbd5e1;"
+                 onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#cbd5e1'">{{ task.title }}</a>
+            </td>
+            <td class="px-4 py-3 hidden sm:table-cell text-xs" style="color:#475569;">{{ task.product_area or '—' }}</td>
+            <td class="px-4 py-3 hidden sm:table-cell">
+              {% if task.status == 'done' %}
+                <span class="px-2 py-0.5 rounded-full text-xs" style="background:#0a2d1a;color:#34d399;">Done</span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full text-xs" style="background:#1e293b;color:#64748b;">Archived</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs" style="color:#475569;">
+              {% if task.completed_at %}{{ task.completed_at.strftime('%b %d, %Y') }}
+              {% elif task.updated_at %}{{ task.updated_at.strftime('%b %d, %Y') }}
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="text-center py-16 text-sm" style="color:#334155;">
+    {% if q %}No tasks matching "{{ q }}".{% else %}No archived tasks yet.{% endif %}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runSynthesis() {
+  const btn = document.getElementById('synthesize-btn');
+  const result = document.getElementById('synthesis-result');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  btn.style.opacity = '0.6';
+
+  try {
+    const resp = await fetch('/learning/synthesize', { method: 'POST' });
+    const data = await resp.json();
+    if (data.ok) {
+      result.innerHTML = `<span style="color:#34d399;">✓ Insights updated from ${data.task_count} tasks.</span> <a href="/learning" style="color:#6366f1;">View →</a>`;
+      result.classList.remove('hidden');
+      btn.textContent = '✓ Done';
+      btn.style.background = '#0a2d1a';
+      btn.style.color = '#34d399';
+    } else {
+      result.innerHTML = `<span style="color:#fbbf24;">${data.error}</span>`;
+      result.classList.remove('hidden');
+      btn.textContent = '✦ Synthesize';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  } catch {
+    result.innerHTML = '<span style="color:#f87171;">Error — try again.</span>';
+    result.classList.remove('hidden');
+    btn.textContent = '✦ Synthesize';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+</script>
+{% endblock %}

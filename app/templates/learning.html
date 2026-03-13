@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Job Insights — Cockpit{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-bold" style="color:#e2e8f0;">Job Insights</h1>
+    <div class="text-sm mt-0.5" style="color:#475569;">
+      Synthesized from your completed work — automatically injected into every coaching conversation
+    </div>
+  </div>
+  <a href="/archive" class="text-sm transition" style="color:#475569;"
+     onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Archive</a>
+</div>
+
+{% if ctx and ctx.content %}
+  <div class="rounded-xl p-5 mb-5" style="background:#0f172a;border:1px solid #1e293b;">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xs font-semibold tracking-wider" style="color:#6366f1;">CURRENT INSIGHTS</div>
+      <div class="text-xs" style="color:#334155;">
+        Based on {{ ctx.task_count }} tasks
+        {% if ctx.updated_at %}· Updated {{ ctx.updated_at.strftime('%b %d') }}{% endif %}
+      </div>
+    </div>
+    <div class="text-sm chat-prose" style="color:#94a3b8;">
+      {{ ctx.content | markdown }}
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between rounded-xl p-4" style="background:#0d0f1a;border:1px solid #1e1b3a;">
+    <div class="text-xs" style="color:#475569;">
+      {{ done_count }} completed tasks available · Re-synthesize anytime to update with new completions
+    </div>
+    <button onclick="runSynthesis()" id="synth-btn"
+      class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+      style="background:#312e81;color:#a5b4fc;"
+      onmouseover="this.style.background='#3730a3'" onmouseout="this.style.background='#312e81'">
+      ✦ Re-synthesize
+    </button>
+  </div>
+
+{% elif done_count > 0 %}
+  <div class="text-center py-12 rounded-xl" style="background:#0f172a;border:1px solid #1e293b;">
+    <div class="text-2xl mb-3">✦</div>
+    <div class="text-sm font-medium mb-1" style="color:#e2e8f0;">{{ done_count }} completed tasks ready to analyze</div>
+    <div class="text-sm mb-5" style="color:#475569;">Synthesize them into a profile that makes your AI coach smarter over time.</div>
+    <button onclick="runSynthesis()" id="synth-btn"
+      class="rounded-xl px-6 py-2.5 text-sm font-semibold transition"
+      style="background:#4f46e5;color:white;"
+      onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+      ✦ Build Insights
+    </button>
+  </div>
+
+{% else %}
+  <div class="text-center py-12 text-sm" style="color:#334155;">
+    Complete some tasks first — then synthesize them into coaching context here.
+  </div>
+{% endif %}
+
+<div id="synth-status" class="mt-4 text-sm hidden text-center" style="color:#6366f1;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runSynthesis() {
+  const btn = document.getElementById('synth-btn');
+  const status = document.getElementById('synth-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analyzing...'; btn.style.opacity = '0.6'; }
+  status.classList.remove('hidden');
+  status.textContent = 'Sending completed tasks to Claude for analysis...';
+
+  try {
+    const resp = await fetch('/learning/synthesize', { method: 'POST' });
+    const data = await resp.json();
+    if (data.ok) {
+      status.style.color = '#34d399';
+      status.textContent = `✓ Updated from ${data.task_count} tasks. Reloading...`;
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      status.style.color = '#fbbf24';
+      status.textContent = data.error;
+      if (btn) { btn.disabled = false; btn.textContent = '✦ Re-synthesize'; btn.style.opacity = '1'; }
+    }
+  } catch {
+    status.style.color = '#f87171';
+    status.textContent = 'Error — try again.';
+    if (btn) { btn.disabled = false; btn.textContent = '✦ Re-synthesize'; btn.style.opacity = '1'; }
+  }
+}
+</script>
+{% endblock %}

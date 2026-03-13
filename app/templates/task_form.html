@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{% if task %}Edit Task{% else %}New Task{% endif %} — Cockpit{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-bold" style="color:#e2e8f0;">{% if task %}Edit Task{% else %}New Task{% endif %}</h1>
+  <a href="{{ '/task/' ~ task.id if task else '/' }}" class="text-sm transition" style="color:#475569;"
+     onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Cancel</a>
+</div>
+
+<form method="POST" class="space-y-5">
+
+  <!-- Title -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Title <span style="color:#ef4444;">*</span></label>
+    <input type="text" name="title" value="{{ task.title if task else '' }}" required autofocus
+      class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+  </div>
+
+  <!-- Description -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Description</label>
+    <textarea name="description" rows="3" class="w-full border rounded-xl px-3 py-2.5 text-sm">{{ task.description if task else '' }}</textarea>
+  </div>
+
+  <!-- Row: Status / Priority / Size -->
+  <div class="grid grid-cols-3 gap-3">
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Status</label>
+      <select name="status" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        {% for s in ['not_started', 'in_progress', 'blocked', 'done', 'archived'] %}
+          <option value="{{ s }}" {% if task and task.status == s %}selected{% elif not task and s == 'not_started' %}selected{% endif %}>
+            {{ s.replace('_', ' ').title() }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Priority</label>
+      <select name="priority" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        {% for p in ['low', 'medium', 'high', 'critical'] %}
+          <option value="{{ p }}" {% if task and task.priority == p %}selected{% elif not task and p == 'medium' %}selected{% endif %}>
+            {{ p.title() }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Size</label>
+      <select name="size" class="w-full border rounded-xl px-3 py-2.5 text-sm">
+        {% for sz in ['S', 'M', 'L'] %}
+          <option value="{{ sz }}" {% if task and task.size == sz %}selected{% elif not task and sz == 'M' %}selected{% endif %}>{{ sz }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Work location -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Work location</label>
+    <div class="grid grid-cols-3 gap-2">
+      {% for loc, label, bg, col, border in [
+          ('remote', 'Remote only', '#0f2b2b', '#34d399', '#065f46'),
+          ('office', 'Office only',  '#1f1b0a', '#fbbf24', '#78350f'),
+          ('hybrid', 'Either',       '#1e1b3a', '#818cf8', '#312e81')
+      ] %}
+        <label class="cursor-pointer">
+          <input type="radio" name="work_location" value="{{ loc }}" class="sr-only loc-radio"
+            {% if (task and task.work_location == loc) or (not task and loc == 'hybrid') %}checked{% endif %} />
+          <div class="loc-btn py-2.5 text-center text-xs font-semibold rounded-xl border-2 transition select-none"
+               data-col="{{ col }}"
+               style="background:{{ bg }};color:{{ col }};border-color:{{ border }};">
+            {{ label }}
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Row: Deadline / Product Area -->
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Deadline</label>
+      <input type="date" name="deadline"
+        value="{{ task.deadline.strftime('%Y-%m-%d') if task and task.deadline else '' }}"
+        class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Product Area</label>
+      <input type="text" name="product_area" value="{{ task.product_area if task else '' }}"
+        placeholder="e.g. LIMCA 3, Personal"
+        class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+    </div>
+  </div>
+
+  <!-- Deliverable -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Deliverable <span class="font-normal" style="color:#475569;">(what "done" looks like)</span></label>
+    <textarea name="deliverable" rows="2" class="w-full border rounded-xl px-3 py-2.5 text-sm">{{ task.deliverable if task else '' }}</textarea>
+  </div>
+
+  <!-- Row: Reporting to / Waiting on -->
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Reporting to</label>
+      <input type="text" name="reporting_to" value="{{ task.reporting_to if task else '' }}"
+        class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Waiting on</label>
+      <input type="text" name="waiting_on" value="{{ task.waiting_on if task else '' }}"
+        class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+    </div>
+  </div>
+
+  <!-- Sort order -->
+  <div class="w-28">
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Sort order</label>
+    <input type="number" name="sort_order" value="{{ task.sort_order if task else 0 }}"
+      class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+  </div>
+
+  <!-- Submit / Delete -->
+  <div class="flex items-center gap-4 pt-2">
+    <button type="submit"
+      class="rounded-xl px-6 py-2.5 text-sm font-semibold transition"
+      style="background:#4f46e5;color:white;"
+      onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+      {% if task %}Save Changes{% else %}Create Task{% endif %}
+    </button>
+    {% if task %}
+      <form method="POST" action="/task/{{ task.id }}/delete" onsubmit="return confirm('Delete this task?')">
+        <button type="submit" class="text-sm transition" style="color:#64748b;"
+                onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">Delete task</button>
+      </form>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const locRadios = document.querySelectorAll('.loc-radio');
+function updateLoc() {
+  locRadios.forEach(r => {
+    const btn = r.nextElementSibling;
+    btn.style.opacity = r.checked ? '1' : '0.4';
+    btn.style.boxShadow = r.checked ? `0 0 10px 1px ${btn.dataset.col}44` : 'none';
+  });
+}
+locRadios.forEach(r => r.addEventListener('change', updateLoc));
+updateLoc();
+</script>
+{% endblock %}

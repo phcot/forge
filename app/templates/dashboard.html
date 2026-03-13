@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Cockpit{% endblock %}
+
+{% block content %}
+
+{% macro priority_dot(priority) %}
+  {% if priority == 'critical' %}<span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:#ef4444;box-shadow:0 0 4px #ef4444;"></span>
+  {% elif priority == 'high' %}<span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:#f97316;box-shadow:0 0 4px #f97316;"></span>
+  {% elif priority == 'medium' %}<span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:#6366f1;"></span>
+  {% else %}<span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:#475569;"></span>
+  {% endif %}
+{% endmacro %}
+
+{% macro status_badge(status) %}
+  {% if status == 'in_progress' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#1e3a5f;color:#60a5fa;">In Progress</span>
+  {% elif status == 'not_started' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#1e293b;color:#94a3b8;">Not Started</span>
+  {% elif status == 'blocked' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#2d1f0a;color:#fbbf24;">Blocked</span>
+  {% elif status == 'done' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#0a2d1a;color:#34d399;">Done</span>
+  {% endif %}
+{% endmacro %}
+
+<!-- Check-in banner -->
+<div class="mb-6">
+  {% if checkin %}
+    <div class="rounded-xl px-4 py-3 flex items-start justify-between gap-3" style="background:#0f172a;border:1px solid #1e293b;">
+      <div>
+        <div class="text-xs font-semibold mb-1.5 tracking-wider" style="color:#6366f1;">TODAY'S CHECK-IN</div>
+        <div class="text-sm flex flex-wrap gap-x-4 gap-y-1" style="color:#94a3b8;">
+          <span>Energy: <strong style="color:#e2e8f0;">{{ checkin.energy_level }}</strong></span>
+          <span>Location: <strong style="color:#e2e8f0;">{{ checkin.work_location }}</strong></span>
+          {% if checkin.time_available %}<span>Time: <strong style="color:#e2e8f0;">{{ checkin.time_available }}</strong></span>{% endif %}
+          {% if checkin.meetings %}<span>Meetings: {{ checkin.meetings }}</span>{% endif %}
+          {% if checkin.blockers %}<span style="color:#fbbf24;">Blockers: {{ checkin.blockers }}</span>{% endif %}
+        </div>
+        {% if checkin.notes %}<div class="text-sm mt-1 italic" style="color:#64748b;">{{ checkin.notes }}</div>{% endif %}
+      </div>
+      <a href="/checkin" class="text-xs shrink-0 mt-0.5 transition" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">Edit</a>
+    </div>
+  {% else %}
+    <a href="/checkin" class="block rounded-xl px-4 py-3 transition" style="background:#1e1b3a;border:1px solid #312e81;"
+       onmouseover="this.style.background='#252060'" onmouseout="this.style.background='#1e1b3a'">
+      <div class="text-sm font-semibold" style="color:#a5b4fc;">Start your day — fill in today's check-in</div>
+      <div class="text-xs mt-0.5" style="color:#6366f1;">Energy, location, time, meetings, blockers</div>
+    </a>
+  {% endif %}
+</div>
+
+<!-- Active tasks header -->
+<div class="mb-3 flex items-center justify-between">
+  <h2 class="font-semibold" style="color:#e2e8f0;">Active Tasks</h2>
+  <a href="/task/new" class="text-sm font-medium transition" style="color:#6366f1;"
+     onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">+ New task</a>
+</div>
+
+{% if active_tasks %}
+  <div class="space-y-2 mb-8">
+    {% for task in active_tasks %}
+      <div class="rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+           style="background:#0f172a;border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              {{ priority_dot(task.priority) }}
+              <a href="/task/{{ task.id }}" class="font-medium transition truncate"
+                 style="color:#e2e8f0;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#e2e8f0'">{{ task.title }}</a>
+              {{ status_badge(task.status) }}
+              <span class="text-xs" style="color:#475569;">{{ task.size }}</span>
+              {% if task.work_location == 'remote' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f2b2b;color:#34d399;">remote</span>
+              {% elif task.work_location == 'office' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#1f1b0a;color:#fbbf24;">office</span>
+              {% endif %}
+              {% if task.product_area %}
+                <span class="text-xs px-1.5 py-0.5 rounded" style="background:#1e293b;color:#64748b;">{{ task.product_area }}</span>
+              {% endif %}
+            </div>
+            {% if task.deadline %}
+              <div class="text-xs mt-1" style="color:#475569;">Due {{ task.deadline.strftime('%b %d') }}</div>
+            {% endif %}
+            {% if task.waiting_on and task.status == 'blocked' %}
+              <div class="text-xs mt-1" style="color:#fbbf24;">Waiting on: {{ task.waiting_on }}</div>
+            {% endif %}
+          </div>
+          <!-- Quick actions -->
+          <div class="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+            {% if task.status != 'in_progress' %}
+              <form method="POST" action="/task/{{ task.id }}/quick-status">
+                <input type="hidden" name="status" value="in_progress" />
+                <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e3a5f;color:#60a5fa;"
+                        onmouseover="this.style.background='#1e4976'" onmouseout="this.style.background='#1e3a5f'">Start</button>
+              </form>
+            {% endif %}
+            {% if task.status != 'blocked' %}
+              <form method="POST" action="/task/{{ task.id }}/quick-status">
+                <input type="hidden" name="status" value="blocked" />
+                <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#2d1f0a;color:#fbbf24;"
+                        onmouseover="this.style.background='#3d2b0e'" onmouseout="this.style.background='#2d1f0a'">Block</button>
+              </form>
+            {% endif %}
+            <form method="POST" action="/task/{{ task.id }}/quick-status">
+              <input type="hidden" name="status" value="done" />
+              <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#0a2d1a;color:#34d399;"
+                      onmouseover="this.style.background='#0e3d23'" onmouseout="this.style.background='#0a2d1a'">Done ✓</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center py-12 text-sm" style="color:#475569;">
+    No active tasks.
+    <a href="/task/new" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'"> Add one?</a>
+  </div>
+{% endif %}
+
+<!-- Completed today -->
+{% if completed_today %}
+  <div class="mb-2">
+    <h2 class="text-sm font-semibold" style="color:#34d399;">Completed Today ({{ completed_today|length }})</h2>
+  </div>
+  <div class="space-y-1">
+    {% for task in completed_today %}
+      <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background:#0a1f12;border:1px solid #14532d;">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#34d399" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        </svg>
+        <a href="/task/{{ task.id }}" class="text-sm transition" style="color:#86efac;"
+           onmouseover="this.style.color='#4ade80'" onmouseout="this.style.color='#86efac'">{{ task.title }}</a>
+        {% if task.completed_at %}
+          <span class="text-xs ml-auto" style="color:#166534;">{{ task.completed_at.strftime('%H:%M') }}</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<a href="/chat" class="fixed bottom-6 right-6 rounded-full shadow-2xl w-14 h-14 flex items-center justify-center transition z-50"
+   style="background:#4f46e5;box-shadow:0 0 20px rgba(99,102,241,0.4);"
+   onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'"
+   title="Open planning chat">
+  <svg class="w-6 h-6 text-white" fill="none" stroke="white" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
+</a>
+{% endblock %}

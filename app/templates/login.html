@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cockpit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #080b14; color: #e2e8f0; }
+    input { background-color: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; }
+    input::placeholder { color: #64748b !important; }
+    input:focus { outline: none; box-shadow: 0 0 0 2px rgba(99,102,241,0.5) !important; border-color: #6366f1 !important; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+  <div class="w-full max-w-sm px-4">
+    <div class="rounded-2xl p-8" style="background:#0f172a;border:1px solid #1e293b;">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold mb-1" style="color:#818cf8;">Cockpit</h1>
+        <p class="text-sm" style="color:#64748b;">Your personal task coach</p>
+      </div>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+          <div class="px-3 py-2 rounded-lg text-sm mb-4" style="background:#2d1b1b;border:1px solid #7f1d1d;color:#fca5a5;">{{ msg }}</div>
+        {% endfor %}{% endif %}
+      {% endwith %}
+
+      <form method="POST">
+        <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">PIN</label>
+        <input type="password" name="pin" autofocus placeholder="Enter your PIN"
+          class="w-full border rounded-xl px-3 py-2.5 text-sm mb-4" />
+        <button type="submit"
+          class="w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+          style="background:#4f46e5;color:white;"
+          onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+          Enter
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

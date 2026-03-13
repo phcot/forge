@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} — Cockpit{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-start justify-between mb-4 gap-3">
+  <div class="min-w-0 flex-1">
+    <div class="flex items-center gap-2 flex-wrap mb-1.5">
+      {% if task.priority == 'critical' %}<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#ef4444;box-shadow:0 0 6px #ef4444;"></span>
+      {% elif task.priority == 'high' %}<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#f97316;box-shadow:0 0 5px #f97316;"></span>
+      {% elif task.priority == 'medium' %}<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#6366f1;"></span>
+      {% else %}<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#334155;"></span>{% endif %}
+
+      {% if task.status == 'in_progress' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#1e3a5f;color:#60a5fa;">In Progress</span>
+      {% elif task.status == 'not_started' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#1e293b;color:#94a3b8;">Not Started</span>
+      {% elif task.status == 'blocked' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#2d1f0a;color:#fbbf24;">Blocked</span>
+      {% elif task.status == 'done' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#0a2d1a;color:#34d399;">Done</span>
+      {% elif task.status == 'archived' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:#1e293b;color:#64748b;">Archived</span>
+      {% endif %}
+
+      <span class="text-xs" style="color:#475569;">{{ task.size }} · {{ task.priority }}</span>
+
+      {% if task.work_location == 'remote' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f2b2b;color:#34d399;">remote</span>
+      {% elif task.work_location == 'office' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#1f1b0a;color:#fbbf24;">office</span>
+      {% else %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#1e1b3a;color:#818cf8;">hybrid</span>
+      {% endif %}
+    </div>
+    <h1 class="text-xl font-bold leading-tight" style="color:#f1f5f9;">{{ task.title }}</h1>
+  </div>
+  <a href="/task/{{ task.id }}/edit" class="shrink-0 text-sm font-medium transition mt-1" style="color:#6366f1;"
+     onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">Edit</a>
+</div>
+
+<!-- Details card -->
+<div class="rounded-xl p-4 mb-6 space-y-3 text-sm" style="background:#0f172a;border:1px solid #1e293b;">
+  {% if task.description %}
+    <div>
+      <div class="text-xs font-semibold mb-1 tracking-wider" style="color:#475569;">DESCRIPTION</div>
+      <div class="whitespace-pre-wrap" style="color:#94a3b8;">{{ task.description }}</div>
+    </div>
+  {% endif %}
+  {% if task.deliverable %}
+    <div>
+      <div class="text-xs font-semibold mb-1 tracking-wider" style="color:#475569;">DELIVERABLE</div>
+      <div style="color:#94a3b8;">{{ task.deliverable }}</div>
+    </div>
+  {% endif %}
+  <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+    {% if task.deadline %}<div><span style="color:#475569;">Deadline:</span> <span style="color:#e2e8f0;">{{ task.deadline.strftime('%b %d, %Y') }}</span></div>{% endif %}
+    {% if task.product_area %}<div><span style="color:#475569;">Area:</span> <span style="color:#e2e8f0;">{{ task.product_area }}</span></div>{% endif %}
+    {% if task.reporting_to %}<div><span style="color:#475569;">Reporting to:</span> <span style="color:#e2e8f0;">{{ task.reporting_to }}</span></div>{% endif %}
+    {% if task.waiting_on %}<div><span style="color:#475569;">Waiting on:</span> <span style="color:#fbbf24;">{{ task.waiting_on }}</span></div>{% endif %}
+    <div><span style="color:#475569;">Created:</span> <span style="color:#64748b;">{{ task.created_at.strftime('%b %d') }}</span></div>
+    {% if task.completed_at %}<div><span style="color:#475569;">Completed:</span> <span style="color:#34d399;">{{ task.completed_at.strftime('%b %d') }}</span></div>{% endif %}
+  </div>
+
+  <!-- Quick status -->
+  <div class="pt-1 flex flex-wrap gap-2">
+    {% for s, label, bg, col in [
+        ('not_started', 'Not Started', '#1e293b',   '#94a3b8'),
+        ('in_progress', 'In Progress', '#1e3a5f',   '#60a5fa'),
+        ('blocked',     'Blocked',     '#2d1f0a',   '#fbbf24'),
+        ('done',        'Done',        '#0a2d1a',   '#34d399'),
+        ('archived',    'Archive',     '#151f2e',   '#64748b')
+    ] %}
+      {% if task.status != s %}
+        <form method="POST" action="/task/{{ task.id }}/quick-status">
+          <input type="hidden" name="status" value="{{ s }}" />
+          <button class="text-xs px-2.5 py-1 rounded-lg transition"
+                  style="background:{{ bg }};color:{{ col }};">{{ label }}</button>
+        </form>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Task Chat -->
+<div class="mb-3 flex items-center justify-between">
+  <h2 class="font-semibold text-sm" style="color:#94a3b8;">Task Chat</h2>
+  <span class="text-xs" style="color:#334155;">Claude has full task context</span>
+</div>
+
+<div id="chat-messages" class="space-y-3 mb-4" style="min-height:80px;">
+  {% for msg in messages %}
+    <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
+      {% if msg.role == 'user' %}
+        <div class="max-w-[80%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm" style="background:#3730a3;color:#e0e7ff;">
+          {{ msg.content }}
+        </div>
+      {% else %}
+        <div class="max-w-[85%] px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm chat-prose" style="background:#0f172a;border:1px solid #1e293b;color:#cbd5e1;">
+          {{ msg.content | markdown }}
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+  <div id="typing-indicator" class="hidden justify-start">
+    <div class="px-3.5 py-2.5 rounded-2xl rounded-bl-sm" style="background:#0f172a;border:1px solid #1e293b;">
+      <div class="flex gap-1.5 items-center h-4">
+        <span class="w-1.5 h-1.5 rounded-full animate-bounce" style="background:#6366f1;animation-delay:0s"></span>
+        <span class="w-1.5 h-1.5 rounded-full animate-bounce" style="background:#6366f1;animation-delay:.18s"></span>
+        <span class="w-1.5 h-1.5 rounded-full animate-bounce" style="background:#6366f1;animation-delay:.36s"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chat input -->
+<div class="flex gap-2 items-end sticky bottom-4">
+  <textarea id="chat-input" rows="1" placeholder="Ask about this task..."
+    class="flex-1 border rounded-xl px-3.5 py-2.5 text-sm resize-none"
+    style="max-height:120px;"></textarea>
+  <button id="send-btn" onclick="sendMessage()"
+    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+    style="background:#4f46e5;color:white;"
+    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">Send</button>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const taskId = {{ task.id }};
+const sendUrl = `/chat/task/${taskId}/send`;
+let sending = false;
+
+const input = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const messagesDiv = document.getElementById('chat-messages');
+const typingIndicator = document.getElementById('typing-indicator');
+
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function scrollBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function appendUserMessage(text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'flex justify-end';
+  const bubble = document.createElement('div');
+  bubble.className = 'max-w-[80%] px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm';
+  bubble.style.cssText = 'background:#3730a3;color:#e0e7ff;';
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+  messagesDiv.insertBefore(wrap, typingIndicator);
+}
+
+function createAssistantBubble() {
+  const wrap = document.createElement('div');
+  wrap.className = 'flex justify-start';
+  const bubble = document.createElement('div');
+  bubble.className = 'max-w-[85%] px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm chat-prose';
+  bubble.style.cssText = 'background:#0f172a;border:1px solid #1e293b;color:#cbd5e1;';
+  wrap.appendChild(bubble);
+  messagesDiv.insertBefore(wrap, typingIndicator);
+  return bubble;
+}
+
+function renderMarkdown(raw) {
+  let t = raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  t = t.replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
+  t = t.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  t = t.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  t = t.replace(/^---$/gm,'<hr>');
+  t = t.replace(/(^- .+(\n- .+)*)/gm, m => '<ul>' + m.replace(/^- (.+)$/gm,'<li>$1</li>') + '</ul>');
+  t = t.replace(/(^\d+\. .+(\n\d+\. .+)*)/gm, m => '<ol>' + m.replace(/^\d+\. (.+)$/gm,'<li>$1</li>') + '</ol>');
+  t = t.split(/\n{2,}/).map(p => {
+    if (/^<(ul|ol|pre|h[1-3]|blockquote|hr)/.test(p.trim())) return p;
+    return `<p>${p.replace(/\n/g,'<br>')}</p>`;
+  }).join('');
+  return t;
+}
+
+async function sendMessage() {
+  if (sending) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sending = true;
+  sendBtn.disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendUserMessage(text);
+  typingIndicator.classList.remove('hidden');
+  typingIndicator.classList.add('flex');
+  scrollBottom();
+
+  try {
+    const resp = await fetch(sendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+
+    typingIndicator.classList.add('hidden');
+    typingIndicator.classList.remove('flex');
+
+    const bubble = createAssistantBubble();
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.text) {
+              fullText += data.text;
+              bubble.innerHTML = renderMarkdown(fullText);
+              scrollBottom();
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (e) {
+    typingIndicator.classList.add('hidden');
+    const b = createAssistantBubble();
+    b.textContent = 'Error connecting to server.';
+  }
+
+  sending = false;
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+scrollBottom();
+</script>
+{% endblock %}

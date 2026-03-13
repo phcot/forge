@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Daily Check-In — Cockpit{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-bold" style="color:#e2e8f0;">Daily Check-In</h1>
+    <div class="text-sm mt-0.5" style="color:#475569;">{{ today.strftime('%A, %B %d') }}</div>
+  </div>
+  <a href="/" class="text-sm transition" style="color:#475569;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#475569'">Cancel</a>
+</div>
+
+<form method="POST" class="space-y-6">
+
+  <!-- Energy level -->
+  <div>
+    <label class="block text-sm font-medium mb-2" style="color:#94a3b8;">Energy level</label>
+    <div class="grid grid-cols-3 gap-2">
+      {% for e, label, bg, col, border in [
+          ('low',    'Low',    '#1f0e0e', '#f87171', '#7f1d1d'),
+          ('medium', 'Medium', '#1f1b0a', '#fbbf24', '#78350f'),
+          ('high',   'High',   '#0a1f12', '#34d399', '#14532d')
+      ] %}
+        <label class="cursor-pointer">
+          <input type="radio" name="energy_level" value="{{ e }}" class="sr-only energy-radio"
+            {% if (checkin and checkin.energy_level == e) or (not checkin and e == 'medium') %}checked{% endif %} />
+          <div class="energy-btn py-3 text-center text-sm font-semibold rounded-xl border-2 transition select-none"
+               data-bg="{{ bg }}" data-col="{{ col }}" data-border="{{ border }}"
+               style="background:{{ bg }};color:{{ col }};border-color:{{ border }};">
+            {{ label }}
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Work location -->
+  <div>
+    <label class="block text-sm font-medium mb-2" style="color:#94a3b8;">Working from</label>
+    <div class="grid grid-cols-2 gap-2">
+      {% for loc, label, bg, col, border in [
+          ('remote', 'Remote', '#0f2b2b', '#34d399', '#065f46'),
+          ('office', 'Office', '#1f1b0a', '#fbbf24', '#78350f')
+      ] %}
+        <label class="cursor-pointer">
+          <input type="radio" name="work_location" value="{{ loc }}" class="sr-only location-radio"
+            {% if (checkin and checkin.work_location == loc) or (not checkin and loc == 'remote') %}checked{% endif %} />
+          <div class="location-btn py-3 text-center text-sm font-semibold rounded-xl border-2 transition select-none"
+               data-bg="{{ bg }}" data-col="{{ col }}" data-border="{{ border }}"
+               style="background:{{ bg }};color:{{ col }};border-color:{{ border }};">
+            {{ label }}
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Time available -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Time available</label>
+    <input type="text" name="time_available"
+      value="{{ checkin.time_available if checkin else '' }}"
+      placeholder="e.g. Full day, 2hr block then meetings"
+      class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+  </div>
+
+  <!-- Meetings -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Meetings today</label>
+    <input type="text" name="meetings"
+      value="{{ checkin.meetings if checkin else '' }}"
+      placeholder="e.g. 10am standup, 2pm client call"
+      class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+  </div>
+
+  <!-- Blockers -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Blockers</label>
+    <input type="text" name="blockers"
+      value="{{ checkin.blockers if checkin else '' }}"
+      placeholder="What's in the way?"
+      class="w-full border rounded-xl px-3 py-2.5 text-sm" />
+  </div>
+
+  <!-- Notes -->
+  <div>
+    <label class="block text-sm font-medium mb-1.5" style="color:#94a3b8;">Notes / What's on your mind</label>
+    <textarea name="notes" rows="3"
+      placeholder="Carry-overs from yesterday, context..."
+      class="w-full border rounded-xl px-3 py-2.5 text-sm">{{ checkin.notes if checkin else '' }}</textarea>
+  </div>
+
+  <button type="submit"
+    class="w-full rounded-xl py-3 text-sm font-semibold transition"
+    style="background:#4f46e5;color:white;"
+    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+    {% if checkin %}Update Check-In{% else %}Save Check-In{% endif %}
+  </button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setupToggleGroup(radioClass, btnClass) {
+  const radios = document.querySelectorAll(`.${radioClass}`);
+  function update() {
+    radios.forEach(r => {
+      const btn = r.nextElementSibling;
+      if (r.checked) {
+        btn.style.opacity = '1';
+        btn.style.boxShadow = `0 0 10px 1px ${btn.dataset.col}44`;
+      } else {
+        btn.style.opacity = '0.4';
+        btn.style.boxShadow = 'none';
+      }
+    });
+  }
+  radios.forEach(r => r.addEventListener('change', update));
+  update();
+}
+setupToggleGroup('energy-radio', 'energy-btn');
+setupToggleGroup('location-radio', 'location-btn');
+</script>
+{% endblock %}
