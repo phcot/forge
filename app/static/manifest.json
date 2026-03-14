@@ -1,0 +1,18 @@
+{
+  "name": "Cockpit",
+  "short_name": "Cockpit",
+  "description": "Personal task management and AI coaching",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080b14",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
