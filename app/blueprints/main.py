@@ -1,10 +1,21 @@
+import os
 from datetime import date, datetime
 from functools import wraps
-from flask import Blueprint, render_template, redirect, url_for, session, request, flash, jsonify
+from flask import Blueprint, render_template, redirect, url_for, session, request, flash, jsonify, send_from_directory, make_response, current_app
 from app import db
 from app.models import Task, DailyCheckIn, now_eastern
 
 main_bp = Blueprint('main', __name__)
+
+
+@main_bp.route('/sw.js')
+def service_worker():
+    response = make_response(
+        send_from_directory(os.path.join(current_app.root_path, 'static'), 'sw.js')
+    )
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
 
 
 def login_required(f):

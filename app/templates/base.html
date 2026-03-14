@@ -2,11 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>{% block title %}Cockpit{% endblock %}</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cockpit" />
+  <link rel="apple-touch-icon" href="/static/icon.svg" />
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #080b14; color: #e2e8f0; }
+    html { font-size: calc(16px + 1pt); }
+    body { background-color: #080b14; color: #e2e8f0; touch-action: pan-x pan-y; }
+
+    /* Disable double-tap zoom on interactive elements */
+    a, button, input, select, textarea, label { touch-action: manipulation; }
 
     /* Glow animation for in-progress tasks */
     @keyframes glow-pulse {
@@ -53,20 +67,24 @@
       border-color: #6366f1 !important;
     }
     select option { background: #1e293b; color: #e2e8f0; }
+
+    /* Mobile nav scrolling */
+    .nav-links { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .nav-links::-webkit-scrollbar { display: none; }
   </style>
 </head>
 <body class="min-h-screen">
 
   <!-- Nav -->
-  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;" class="px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-    <a href="/" class="font-bold text-lg tracking-tight" style="color:#818cf8;">Cockpit</a>
-    <div class="flex items-center gap-4 text-sm">
-      <a href="/checkin" class="text-slate-400 hover:text-slate-200 transition">Check-in</a>
-      <a href="/task/new" class="text-slate-400 hover:text-slate-200 transition">+ Task</a>
-      <a href="/archive" class="text-slate-400 hover:text-slate-200 transition">Archive</a>
-      <a href="/learning" class="text-slate-400 hover:text-slate-200 transition">Insights</a>
-      <a href="/chat" class="text-slate-400 hover:text-slate-200 transition">Chat</a>
-      <a href="/logout" class="text-slate-600 hover:text-slate-400 transition">Logout</a>
+  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;" class="px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+    <a href="/" class="font-bold text-lg tracking-tight flex-shrink-0" style="color:#818cf8;">Cockpit</a>
+    <div class="nav-links flex items-center gap-4 text-sm overflow-x-auto flex-1 min-w-0">
+      <a href="/checkin" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Check-in</a>
+      <a href="/task/new" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">+ Task</a>
+      <a href="/archive" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Archive</a>
+      <a href="/learning" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Insights</a>
+      <a href="/chat" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Chat</a>
+      <a href="/logout" class="text-slate-600 hover:text-slate-400 transition whitespace-nowrap">Logout</a>
     </div>
   </nav>
 
@@ -86,5 +104,19 @@
   </main>
 
   {% block scripts %}{% endblock %}
+
+  <script>
+    // Prevent pinch zoom (iOS Safari workaround)
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function() {});
+      });
+    }
+  </script>
 </body>
 </html>
