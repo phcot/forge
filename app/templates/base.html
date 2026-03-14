@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>{% block title %}Cockpit{% endblock %}</title>
 
   <!-- PWA -->
@@ -17,7 +17,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html { font-size: calc(16px + 1pt); }
-    body { background-color: #080b14; color: #e2e8f0; touch-action: pan-x pan-y; }
+    body {
+      background-color: #080b14;
+      color: #e2e8f0;
+      touch-action: pan-x pan-y;
+      /* Push content below fixed nav (nav height ~52px + safe area) */
+      padding-top: calc(52px + env(safe-area-inset-top));
+    }
 
     /* Disable double-tap zoom on interactive elements */
     a, button, input, select, textarea, label { touch-action: manipulation; }
@@ -76,7 +82,7 @@
 <body class="min-h-screen">
 
   <!-- Nav -->
-  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;" class="px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;padding-top:calc(0.75rem + env(safe-area-inset-top));" class="px-4 pb-3 flex items-center gap-3 fixed top-0 left-0 right-0 z-10">
     <a href="/" class="font-bold text-lg tracking-tight flex-shrink-0" style="color:#818cf8;">Cockpit</a>
     <div class="nav-links flex items-center gap-4 text-sm overflow-x-auto flex-1 min-w-0">
       <a href="/checkin" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Check-in</a>
