@@ -194,12 +194,15 @@ def send_general_message():
     def generate():
         client = get_anthropic_client()
         full_response = ''
+        created_tasks = []
+        current_messages = messages[:]
         try:
+            # Initial call
             with client.messages.stream(
                 model=MODEL,
                 max_tokens=1024,
                 system=system_prompt,
-                messages=messages,
+                messages=current_messages,
                 tools=[CREATE_TASK_TOOL]
             ) as stream:
                 for text in stream.text_stream:
@@ -207,39 +210,42 @@ def send_general_message():
                     yield f"data: {json.dumps({'text': text})}\n\n"
                 final_msg = stream.get_final_message()
 
-            if final_msg.stop_reason == 'tool_use':
-                tool_block = next(b for b in final_msg.content if b.type == 'tool_use')
-                tool_result = execute_create_task(tool_block.input)
+            # Loop to handle one or more tool calls (Claude may create multiple tasks)
+            while final_msg.stop_reason == 'tool_use':
+                # Serialize content blocks to plain dicts
+                assistant_content = []
+                tool_results = []
+                for b in final_msg.content:
+                    if b.type == 'text':
+                        assistant_content.append({'type': 'text', 'text': b.text})
+                    elif b.type == 'tool_use':
+                        assistant_content.append({'type': 'tool_use', 'id': b.id, 'name': b.name, 'input': b.input})
+                        if b.name == 'create_task':
+                            result = execute_create_task(b.input)
+                            created_tasks.append(b.input.get('title', ''))
+                            tool_results.append({'type': 'tool_result', 'tool_use_id': b.id, 'content': result})
 
-                follow_up_messages = messages + [
-                    {'role': 'assistant', 'content': final_msg.content},
-                    {'role': 'user', 'content': [
-                        {'type': 'tool_result', 'tool_use_id': tool_block.id, 'content': tool_result}
-                    ]}
+                current_messages = current_messages + [
+                    {'role': 'assistant', 'content': assistant_content},
+                    {'role': 'user', 'content': tool_results}
                 ]
 
-                confirmation = ''
                 with client.messages.stream(
                     model=MODEL,
-                    max_tokens=512,
+                    max_tokens=1024,
                     system=system_prompt,
-                    messages=follow_up_messages,
+                    messages=current_messages,
                     tools=[CREATE_TASK_TOOL]
                 ) as stream2:
                     for text in stream2.text_stream:
-                        confirmation += text
+                        full_response += text
                         yield f"data: {json.dumps({'text': text})}\n\n"
+                    final_msg = stream2.get_final_message()
 
-                tool_call_summary = f"[Created task: {tool_block.input.get('title', '')}]\n" + confirmation
-                assistant_msg = ChatMessage(task_id=None, role='assistant', content=tool_call_summary)
-                db.session.add(assistant_msg)
-                db.session.commit()
-                yield f"data: {json.dumps({'done': True, 'task_created': True})}\n\n"
-            else:
-                assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
-                db.session.add(assistant_msg)
-                db.session.commit()
-                yield f"data: {json.dumps({'done': True})}\n\n"
+            assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
+            db.session.add(assistant_msg)
+            db.session.commit()
+            yield f"data: {json.dumps({'done': True, 'tasks_created': created_tasks})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'text': f'[Error: {str(e)}]'})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
