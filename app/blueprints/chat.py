@@ -197,10 +197,10 @@ def send_general_message():
         created_tasks = []
         current_messages = messages[:]
         try:
-            # Initial call
+            # Initial streaming call
             with client.messages.stream(
                 model=MODEL,
-                max_tokens=1024,
+                max_tokens=4096,
                 system=system_prompt,
                 messages=current_messages,
                 tools=[CREATE_TASK_TOOL]
@@ -210,9 +210,13 @@ def send_general_message():
                     yield f"data: {json.dumps({'text': text})}\n\n"
                 final_msg = stream.get_final_message()
 
-            # Loop to handle one or more tool calls (Claude may create multiple tasks)
+            if final_msg.stop_reason == 'max_tokens':
+                truncation_note = '\n\n_[Response truncated — please try a shorter request]_'
+                full_response += truncation_note
+                yield f"data: {json.dumps({'text': truncation_note})}\n\n"
+
+            # Handle tool calls; use non-streaming for follow-ups to avoid nested stream issues
             while final_msg.stop_reason == 'tool_use':
-                # Serialize content blocks to plain dicts
                 assistant_content = []
                 tool_results = []
                 for b in final_msg.content:
@@ -225,29 +229,36 @@ def send_general_message():
                             created_tasks.append(b.input.get('title', ''))
                             tool_results.append({'type': 'tool_result', 'tool_use_id': b.id, 'content': result})
 
+                if not tool_results:
+                    break
+
                 current_messages = current_messages + [
                     {'role': 'assistant', 'content': assistant_content},
                     {'role': 'user', 'content': tool_results}
                 ]
 
-                with client.messages.stream(
+                # Non-streaming follow-up avoids nested generator/stream complexity
+                follow_up = client.messages.create(
                     model=MODEL,
                     max_tokens=1024,
                     system=system_prompt,
                     messages=current_messages,
                     tools=[CREATE_TASK_TOOL]
-                ) as stream2:
-                    for text in stream2.text_stream:
-                        full_response += text
-                        yield f"data: {json.dumps({'text': text})}\n\n"
-                    final_msg = stream2.get_final_message()
+                )
+
+                follow_up_text = ''.join(b.text for b in follow_up.content if b.type == 'text')
+                if follow_up_text:
+                    full_response += follow_up_text
+                    yield f"data: {json.dumps({'text': follow_up_text})}\n\n"
+
+                final_msg = follow_up
 
             assistant_msg = ChatMessage(task_id=None, role='assistant', content=full_response)
             db.session.add(assistant_msg)
             db.session.commit()
             yield f"data: {json.dumps({'done': True, 'tasks_created': created_tasks})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'text': f'[Error: {str(e)}]'})}\n\n"
+            yield f"data: {json.dumps({'text': f'\\n\\n[Error: {str(e)}]'})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
 
     response = Response(stream_with_context(generate()), mimetype='text/event-stream')
