@@ -21,8 +21,9 @@
       background-color: #080b14;
       color: #e2e8f0;
       touch-action: pan-x pan-y;
-      /* Push content below fixed nav (nav height ~52px + safe area) */
       padding-top: calc(52px + env(safe-area-inset-top));
+      /* Push content above fixed footer nav */
+      padding-bottom: calc(64px + env(safe-area-inset-bottom));
     }
 
     /* Disable double-tap zoom on interactive elements */
@@ -74,23 +75,90 @@
     }
     select option { background: #1e293b; color: #e2e8f0; }
 
-    /* Mobile nav scrolling */
-    .nav-links { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .nav-links::-webkit-scrollbar { display: none; }
+    /* Hamburger menu dropdown */
+    #hamburger-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      min-width: 160px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-top: none;
+      border-radius: 0 0 0.5rem 0.5rem;
+      z-index: 20;
+    }
+    #hamburger-menu.open { display: block; }
+
+    /* Footer nav */
+    #footer-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0f172a;
+      border-top: 1px solid #1e293b;
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 10;
+    }
+    .footer-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 10px 0;
+      color: #475569;
+      text-decoration: none;
+      transition: color 0.15s;
+      flex: 1;
+    }
+    .footer-nav-btn:hover, .footer-nav-btn.active { color: #818cf8; }
+    .footer-nav-btn svg { width: 24px; height: 24px; }
+    .footer-nav-btn span { font-size: 0.65rem; }
+
+    /* Center add button */
+    .footer-add-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 0 10px;
+      color: #fff;
+      text-decoration: none;
+      flex: 1;
+    }
+    .footer-add-btn .add-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #6366f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: -14px;
+      box-shadow: 0 0 16px rgba(99,102,241,0.5);
+    }
+    .footer-add-btn span { font-size: 0.65rem; color: #94a3b8; }
   </style>
 </head>
 <body class="min-h-screen">
 
-  <!-- Nav -->
-  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;padding-top:calc(0.75rem + env(safe-area-inset-top));" class="px-4 pb-3 flex items-center gap-3 fixed top-0 left-0 right-0 z-10">
-    <a href="/" class="font-bold text-lg tracking-tight flex-shrink-0" style="color:#818cf8;">Cockpit</a>
-    <div class="nav-links flex items-center gap-4 text-sm overflow-x-auto flex-1 min-w-0">
-      <a href="/checkin" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Check-in</a>
-      <a href="/task/new" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">+ Task</a>
-      <a href="/archive" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Archive</a>
-      <a href="/learning" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Insights</a>
-      <a href="/chat" class="text-slate-400 hover:text-slate-200 transition whitespace-nowrap">Chat</a>
-      <a href="/logout" class="text-slate-600 hover:text-slate-400 transition whitespace-nowrap">Logout</a>
+  <!-- Top Nav -->
+  <nav style="background:#0f172a;border-bottom:1px solid #1e293b;padding-top:calc(0.75rem + env(safe-area-inset-top));" class="px-4 pb-3 flex items-center justify-between fixed top-0 left-0 right-0 z-10">
+    <a href="/" class="font-bold text-lg tracking-tight" style="color:#818cf8;">Cockpit</a>
+
+    <!-- Hamburger button -->
+    <button id="hamburger-btn" aria-label="Menu" style="color:#94a3b8;" class="p-1 -mr-1 rounded">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <!-- Dropdown menu -->
+    <div id="hamburger-menu">
+      <a href="/archive" class="block px-4 py-3 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-b border-slate-800">Archive</a>
+      <a href="/learning" class="block px-4 py-3 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-b border-slate-800">Insights</a>
+      <a href="/logout" class="block px-4 py-3 text-sm text-slate-500 hover:text-slate-400 hover:bg-slate-800 transition">Logout</a>
     </div>
   </nav>
 
@@ -109,6 +177,39 @@
     {% block content %}{% endblock %}
   </main>
 
+  <!-- Footer Nav -->
+  <nav id="footer-nav">
+    <div class="flex items-end justify-around max-w-3xl mx-auto">
+
+      <!-- Home -->
+      <a href="/" class="footer-nav-btn" aria-label="Home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Home</span>
+      </a>
+
+      <!-- New Task (raised) -->
+      <a href="/task/new" class="footer-add-btn" aria-label="New Task">
+        <div class="add-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <span>New Task</span>
+      </a>
+
+      <!-- Chat -->
+      <a href="/chat" class="footer-nav-btn" aria-label="Chat">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>Chat</span>
+      </a>
+
+    </div>
+  </nav>
+
   {% block scripts %}{% endblock %}
 
   <script>
@@ -123,6 +224,25 @@
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function() {});
       });
     }
+
+    // Hamburger menu toggle
+    var btn = document.getElementById('hamburger-btn');
+    var menu = document.getElementById('hamburger-menu');
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+    });
+    document.addEventListener('click', function() {
+      menu.classList.remove('open');
+    });
+
+    // Highlight active footer tab
+    var path = window.location.pathname;
+    document.querySelectorAll('.footer-nav-btn').forEach(function(a) {
+      if (a.getAttribute('href') === path || (path === '/' && a.getAttribute('href') === '/')) {
+        a.classList.add('active');
+      }
+    });
   </script>
 </body>
 </html>
