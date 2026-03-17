@@ -8,7 +8,13 @@ import json
 
 chat_bp = Blueprint('chat', __name__)
 
-MODEL = 'claude-opus-4-6'
+GENERAL_CHAT_MODEL = 'claude-sonnet-4-6'
+TASK_CHAT_MODEL = 'claude-opus-4-6'
+
+# Maximum number of recent messages to send to the API per call.
+# This prevents unbounded context growth and keeps token usage in check.
+# Each "exchange" is roughly 2 messages (user + assistant), so 20 messages ≈ 10 exchanges.
+MAX_CONTEXT_MESSAGES = 20
 
 
 def get_anthropic_client():
@@ -20,6 +26,33 @@ def get_learning_context():
     from app.models import LearningContext
     ctx = LearningContext.query.first()
     return ctx.content if ctx and ctx.content else ''
+
+
+def trim_messages(messages, max_messages=MAX_CONTEXT_MESSAGES):
+    """Return only the most recent messages to keep context bounded.
+
+    If the history exceeds max_messages, prepend a short summary note so
+    Claude knows older conversation existed but isn't distracted by it.
+    Returns (trimmed_messages, was_trimmed).
+    """
+    if len(messages) <= max_messages:
+        return messages, False
+
+    trimmed = messages[-max_messages:]
+
+    # Ensure the trimmed list starts with a 'user' message (API requirement)
+    while trimmed and trimmed[0]['role'] != 'user':
+        trimmed = trimmed[1:]
+
+    summary_note = {
+        'role': 'user',
+        'content': (
+            '[System note: Earlier conversation history has been trimmed to save context. '
+            'Focus only on the current request. Do not reference tasks or topics from '
+            'prior conversations unless the user explicitly brings them up again.]'
+        )
+    }
+    return [summary_note] + trimmed, True
 
 
 CREATE_TASK_TOOL = {
@@ -189,6 +222,7 @@ def send_general_message():
         .all()
     )
     messages = [{'role': m.role, 'content': m.content} for m in history]
+    messages, _ = trim_messages(messages)
     system_prompt = build_general_system_prompt()
 
     def generate():
@@ -199,7 +233,7 @@ def send_general_message():
         try:
             # Initial streaming call
             with client.messages.stream(
-                model=MODEL,
+                model=GENERAL_CHAT_MODEL,
                 max_tokens=4096,
                 system=system_prompt,
                 messages=current_messages,
@@ -239,7 +273,7 @@ def send_general_message():
 
                 # Non-streaming follow-up avoids nested generator/stream complexity
                 follow_up = client.messages.create(
-                    model=MODEL,
+                    model=GENERAL_CHAT_MODEL,
                     max_tokens=1024,
                     system=system_prompt,
                     messages=current_messages,
@@ -286,6 +320,7 @@ def send_task_message(task_id):
         .all()
     )
     messages = [{'role': m.role, 'content': m.content} for m in history]
+    messages, _ = trim_messages(messages)
     system_prompt = build_task_system_prompt(task)
 
     def generate():
@@ -293,7 +328,7 @@ def send_task_message(task_id):
         full_response = ''
         try:
             with client.messages.stream(
-                model=MODEL,
+                model=TASK_CHAT_MODEL,
                 max_tokens=1024,
                 system=system_prompt,
                 messages=messages
