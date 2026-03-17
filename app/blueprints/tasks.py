@@ -51,7 +51,15 @@ def task_detail(task_id):
     task = Task.query.get_or_404(task_id)
     messages = [m for m in task.messages if m.task_id == task.id]
     messages.sort(key=lambda m: m.created_at)
-    return render_template('task_detail.html', task=task, messages=messages)
+    # Determine back URL from Referer, default to dashboard
+    referer = request.headers.get('Referer', '')
+    back_url = '/'
+    if referer:
+        from urllib.parse import urlparse
+        path = urlparse(referer).path
+        if path in ('/archive', '/learning', '/chat'):
+            back_url = path
+    return render_template('task_detail.html', task=task, messages=messages, back_url=back_url)
 
 
 @tasks_bp.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])

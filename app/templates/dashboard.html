@@ -73,39 +73,6 @@
 {% set in_progress_tasks = active_tasks | selectattr('status', 'equalto', 'in_progress') | list %}
 {% set blocked_tasks = active_tasks | selectattr('status', 'equalto', 'blocked') | list %}
 
-<!-- Check-in banner -->
-<div class="mb-6 lg:max-w-3xl">
-  {% if checkin %}
-    <div class="rounded-xl px-4 py-3 flex items-start justify-between gap-3" style="background:#0f172a;border:1px solid #1e293b;">
-      <div>
-        <div class="text-xs font-semibold mb-1.5 tracking-wider" style="color:#6366f1;">TODAY'S CHECK-IN</div>
-        <div class="text-sm flex flex-wrap gap-x-4 gap-y-1" style="color:#94a3b8;">
-          <span>Energy: <strong style="color:#e2e8f0;">{{ checkin.energy_level }}</strong></span>
-          <span>Location: <strong style="color:#e2e8f0;">{{ checkin.work_location }}</strong></span>
-          {% if checkin.time_available %}<span>Time: <strong style="color:#e2e8f0;">{{ checkin.time_available }}</strong></span>{% endif %}
-          {% if checkin.meetings %}<span>Meetings: {{ checkin.meetings }}</span>{% endif %}
-          {% if checkin.blockers %}<span style="color:#fbbf24;">Blockers: {{ checkin.blockers }}</span>{% endif %}
-        </div>
-        {% if checkin.notes %}<div class="text-sm mt-1 italic" style="color:#64748b;">{{ checkin.notes }}</div>{% endif %}
-      </div>
-      <a href="/checkin" class="text-xs shrink-0 mt-0.5 transition" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">Edit</a>
-    </div>
-  {% else %}
-    <a href="/checkin" class="block rounded-xl px-4 py-3 transition" style="background:#1e1b3a;border:1px solid #312e81;"
-       onmouseover="this.style.background='#252060'" onmouseout="this.style.background='#1e1b3a'">
-      <div class="text-sm font-semibold" style="color:#a5b4fc;">Start your day — fill in today's check-in</div>
-      <div class="text-xs mt-0.5" style="color:#6366f1;">Energy, location, time, meetings, blockers</div>
-    </a>
-  {% endif %}
-</div>
-
-<!-- Header row -->
-<div class="mb-3 flex items-center justify-between">
-  <h2 class="font-semibold" style="color:#e2e8f0;">Tasks</h2>
-  <a href="/task/new" class="text-sm font-medium transition" style="color:#6366f1;"
-     onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">+ New task</a>
-</div>
-
 <!-- Category filter pills -->
 {% if active_tasks or backlog_tasks %}
 <div class="flex flex-wrap gap-2 mb-4" id="category-filters">

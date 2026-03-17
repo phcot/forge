@@ -147,15 +147,24 @@
   <nav style="background:#0f172a;border-bottom:1px solid #1e293b;padding-top:calc(0.75rem + env(safe-area-inset-top));" class="px-4 pb-3 flex items-center justify-between fixed top-0 left-0 right-0 z-10">
     <a href="/" class="font-bold text-lg tracking-tight" style="color:#818cf8;">Cockpit</a>
 
-    <!-- Hamburger button -->
-    <button id="hamburger-btn" aria-label="Menu" style="color:#94a3b8;" class="p-1 -mr-1 rounded">
+    <!-- Desktop nav links (lg+) -->
+    <div class="hidden lg:flex items-center gap-5">
+      <a href="/checkin" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Check-in</a>
+      <a href="/archive" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Archive</a>
+      <a href="/learning" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Insights</a>
+      <a href="/logout" class="text-sm transition" style="color:#64748b;" onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#64748b'">Logout</a>
+    </div>
+
+    <!-- Hamburger button (mobile only) -->
+    <button id="hamburger-btn" aria-label="Menu" style="color:#94a3b8;" class="lg:hidden p-1 -mr-1 rounded">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
     </button>
 
-    <!-- Dropdown menu -->
-    <div id="hamburger-menu">
+    <!-- Dropdown menu (mobile only) -->
+    <div id="hamburger-menu" class="lg:hidden">
+      <a href="/checkin" class="block px-4 py-3 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-b border-slate-800">Check-in</a>
       <a href="/archive" class="block px-4 py-3 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-b border-slate-800">Archive</a>
       <a href="/learning" class="block px-4 py-3 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-b border-slate-800">Insights</a>
       <a href="/logout" class="block px-4 py-3 text-sm text-slate-500 hover:text-slate-400 hover:bg-slate-800 transition">Logout</a>
