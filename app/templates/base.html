@@ -173,7 +173,7 @@
     {% endif %}
   {% endwith %}
 
-  <main class="max-w-3xl mx-auto px-4 py-6">
+  <main class="{% block main_class %}max-w-3xl{% endblock %} mx-auto px-4 py-6">
     {% block content %}{% endblock %}
   </main>
 

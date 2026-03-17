@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Cockpit{% endblock %}
 
+{% block main_class %}max-w-3xl lg:max-w-[90rem]{% endblock %}
+
 {% block content %}
 
 {% macro priority_dot(priority) %}
@@ -19,8 +21,60 @@
   {% endif %}
 {% endmacro %}
 
+{# ── Compact card for Kanban columns ─────────────────────────── #}
+{% macro kanban_card(task, ghost) %}
+  <div class="kanban-card task-card rounded-xl px-3 py-2.5 transition cursor-grab {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+       draggable="true"
+       data-task-id="{{ task.id }}"
+       data-status="{{ task.status }}"
+       data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
+       style="background:{% if ghost %}#0a0f1a{% else %}#0f172a{% endif %};border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};{% if ghost %}opacity:0.8;{% endif %}">
+    <div class="flex items-start gap-2">
+      {{ priority_dot(task.priority) }}
+      <div class="min-w-0 flex-1">
+        <a href="/task/{{ task.id }}" class="text-sm font-medium transition block truncate"
+           style="color:#e2e8f0;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#e2e8f0'">{{ task.title }}</a>
+        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+          <span class="text-xs" style="color:#475569;">{{ task.size }}</span>
+          {% if task.work_location == 'remote' %}<span class="text-xs px-1 py-0.5 rounded" style="background:#0f2b2b;color:#34d399;">remote</span>
+          {% elif task.work_location == 'office' %}<span class="text-xs px-1 py-0.5 rounded" style="background:#1f1b0a;color:#fbbf24;">office</span>
+          {% endif %}
+          {% if task.product_area %}
+            <span class="text-xs px-1 py-0.5 rounded truncate max-w-[120px]" style="background:#1e293b;color:#64748b;">{{ task.product_area }}</span>
+          {% endif %}
+        </div>
+        {% if task.deadline %}
+          <div class="text-xs mt-1" style="color:#475569;">Due {{ task.deadline.strftime('%b %d') }}</div>
+        {% endif %}
+        {% if task.waiting_on and task.status == 'blocked' %}
+          <div class="text-xs mt-1 truncate" style="color:#fbbf24;">Waiting: {{ task.waiting_on }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{# ── Completed-today card (simpler) ──────────────────────────── #}
+{% macro completed_card(task) %}
+  <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background:#0a1f12;border:1px solid #14532d;">
+    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#34d399" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+    </svg>
+    <a href="/task/{{ task.id }}" class="text-sm transition truncate" style="color:#86efac;"
+       onmouseover="this.style.color='#4ade80'" onmouseout="this.style.color='#86efac'">{{ task.title }}</a>
+    {% if task.completed_at %}
+      <span class="text-xs ml-auto shrink-0" style="color:#166534;">{{ task.completed_at.strftime('%H:%M') }}</span>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# ── Group tasks by status ────────────────────────────────────── #}
+{% set not_started_tasks = active_tasks | selectattr('status', 'equalto', 'not_started') | list %}
+{% set in_progress_tasks = active_tasks | selectattr('status', 'equalto', 'in_progress') | list %}
+{% set blocked_tasks = active_tasks | selectattr('status', 'equalto', 'blocked') | list %}
+
 <!-- Check-in banner -->
-<div class="mb-6">
+<div class="mb-6 lg:max-w-3xl">
   {% if checkin %}
     <div class="rounded-xl px-4 py-3 flex items-start justify-between gap-3" style="background:#0f172a;border:1px solid #1e293b;">
       <div>
@@ -45,15 +99,15 @@
   {% endif %}
 </div>
 
-<!-- Active tasks header -->
+<!-- Header row -->
 <div class="mb-3 flex items-center justify-between">
-  <h2 class="font-semibold" style="color:#e2e8f0;">Active Tasks</h2>
+  <h2 class="font-semibold" style="color:#e2e8f0;">Tasks</h2>
   <a href="/task/new" class="text-sm font-medium transition" style="color:#6366f1;"
      onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">+ New task</a>
 </div>
 
 <!-- Category filter pills -->
-{% if active_tasks %}
+{% if active_tasks or backlog_tasks %}
 <div class="flex flex-wrap gap-2 mb-4" id="category-filters">
   <button class="category-pill text-xs px-3 py-1 rounded-full font-medium" data-category="all"
           style="background:#312e81;color:#a5b4fc;border:1px solid #4338ca;">All</button>
@@ -64,133 +118,226 @@
 </div>
 {% endif %}
 
-{% if active_tasks %}
-  <div class="space-y-2 mb-8 drop-zone min-h-8" id="task-list" data-section="active">
-    {% for task in active_tasks %}
-      <div class="task-card rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
-           draggable="true"
-           data-task-id="{{ task.id }}"
-           data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
-           style="background:#0f172a;border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};">
-        <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              {{ priority_dot(task.priority) }}
-              <a href="/task/{{ task.id }}" class="font-medium transition truncate"
-                 style="color:#e2e8f0;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#e2e8f0'">{{ task.title }}</a>
-              {{ status_badge(task.status) }}
-              <span class="text-xs" style="color:#475569;">{{ task.size }}</span>
-              {% if task.work_location == 'remote' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f2b2b;color:#34d399;">remote</span>
-              {% elif task.work_location == 'office' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#1f1b0a;color:#fbbf24;">office</span>
-              {% endif %}
-              {% if task.product_area %}
-                <span class="text-xs px-1.5 py-0.5 rounded" style="background:#1e293b;color:#64748b;">{{ task.product_area }}</span>
-              {% endif %}
-            </div>
-            {% if task.deadline %}
-              <div class="text-xs mt-1" style="color:#475569;">Due {{ task.deadline.strftime('%b %d') }}</div>
-            {% endif %}
-            {% if task.waiting_on and task.status == 'blocked' %}
-              <div class="text-xs mt-1" style="color:#fbbf24;">Waiting on: {{ task.waiting_on }}</div>
-            {% endif %}
-          </div>
-          <!-- Quick actions -->
-          <div class="flex items-center gap-1 shrink-0 flex-wrap justify-end">
-            {% if task.status != 'in_progress' %}
-              <form method="POST" action="/task/{{ task.id }}/quick-status">
-                <input type="hidden" name="status" value="in_progress" />
-                <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e3a5f;color:#60a5fa;"
-                        onmouseover="this.style.background='#1e4976'" onmouseout="this.style.background='#1e3a5f'">Start</button>
-              </form>
-            {% endif %}
-            {% if task.status != 'blocked' %}
-              <form method="POST" action="/task/{{ task.id }}/quick-status">
-                <input type="hidden" name="status" value="blocked" />
-                <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#2d1f0a;color:#fbbf24;"
-                        onmouseover="this.style.background='#3d2b0e'" onmouseout="this.style.background='#2d1f0a'">Block</button>
-              </form>
-            {% endif %}
-            <form method="POST" action="/task/{{ task.id }}/quick-status">
-              <input type="hidden" name="status" value="done" />
-              <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#0a2d1a;color:#34d399;"
-                      onmouseover="this.style.background='#0e3d23'" onmouseout="this.style.background='#0a2d1a'">Done ✓</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-{% else %}
-  <div id="active-drop-empty" class="drop-zone rounded-xl py-8 text-center text-sm" data-section="active"
-       style="color:#475569;border:2px dashed #1e293b;">
-    No active tasks — drag one up from the backlog, or
-    <a href="/task/new" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">add one</a>.
-  </div>
-{% endif %}
 
-<!-- Backlog section -->
-<div class="mt-8 mb-3 flex items-center justify-between">
-  <h2 class="font-semibold" style="color:#64748b;">Backlog</h2>
-  <span class="text-xs" style="color:#334155;">{{ backlog_tasks|length }} task{{ 's' if backlog_tasks|length != 1 }}</span>
+{# ══════════════════════════════════════════════════════════════════
+   DESKTOP KANBAN VIEW  (lg and up)
+   ══════════════════════════════════════════════════════════════════ #}
+<div class="hidden lg:grid lg:grid-cols-5 gap-4 mb-8" id="kanban-board">
+
+  {# ── Column: Backlog ──────────────────────────────────────────── #}
+  <div class="kanban-col flex flex-col min-h-[200px]">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h3 class="text-xs font-semibold tracking-wider uppercase" style="color:#64748b;">Backlog</h3>
+      <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e293b;color:#475569;">{{ backlog_tasks|length }}</span>
+    </div>
+    <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="backlog"
+         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 280px);">
+      {% for task in backlog_tasks %}
+        {{ kanban_card(task, ghost=true) }}
+      {% endfor %}
+      {% if not backlog_tasks %}
+        <div class="text-center text-xs py-4" style="color:#334155;">No tasks</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Column: Not Started ──────────────────────────────────────── #}
+  <div class="kanban-col flex flex-col min-h-[200px]">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h3 class="text-xs font-semibold tracking-wider uppercase" style="color:#94a3b8;">Not Started</h3>
+      <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e293b;color:#475569;">{{ not_started_tasks|length }}</span>
+    </div>
+    <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="not_started"
+         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 280px);">
+      {% for task in not_started_tasks %}
+        {{ kanban_card(task, ghost=false) }}
+      {% endfor %}
+      {% if not not_started_tasks %}
+        <div class="text-center text-xs py-4" style="color:#334155;">No tasks</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Column: Active ───────────────────────────────────────────── #}
+  <div class="kanban-col flex flex-col min-h-[200px]">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h3 class="text-xs font-semibold tracking-wider uppercase" style="color:#60a5fa;">Active</h3>
+      <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e3a5f;color:#60a5fa;">{{ in_progress_tasks|length }}</span>
+    </div>
+    <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="in_progress"
+         style="background:#080b14;border:1px solid rgba(99,102,241,0.2);max-height:calc(100vh - 280px);">
+      {% for task in in_progress_tasks %}
+        {{ kanban_card(task, ghost=false) }}
+      {% endfor %}
+      {% if not in_progress_tasks %}
+        <div class="text-center text-xs py-4" style="color:#334155;">No tasks</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Column: Blocked ──────────────────────────────────────────── #}
+  <div class="kanban-col flex flex-col min-h-[200px]">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h3 class="text-xs font-semibold tracking-wider uppercase" style="color:#fbbf24;">Blocked</h3>
+      <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#2d1f0a;color:#fbbf24;">{{ blocked_tasks|length }}</span>
+    </div>
+    <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="blocked"
+         style="background:#080b14;border:1px solid rgba(245,158,11,0.15);max-height:calc(100vh - 280px);">
+      {% for task in blocked_tasks %}
+        {{ kanban_card(task, ghost=false) }}
+      {% endfor %}
+      {% if not blocked_tasks %}
+        <div class="text-center text-xs py-4" style="color:#334155;">No tasks</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Column: Completed Today ──────────────────────────────────── #}
+  <div class="kanban-col flex flex-col min-h-[200px]">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h3 class="text-xs font-semibold tracking-wider uppercase" style="color:#34d399;">Completed Today</h3>
+      <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#0a2d1a;color:#34d399;">{{ completed_today|length }}</span>
+    </div>
+    <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="done"
+         style="background:#080b14;border:1px solid rgba(52,211,153,0.15);max-height:calc(100vh - 280px);">
+      {% for task in completed_today %}
+        {{ completed_card(task) }}
+      {% endfor %}
+      {% if not completed_today %}
+        <div class="text-center text-xs py-4" style="color:#334155;">No tasks</div>
+      {% endif %}
+    </div>
+  </div>
+
 </div>
 
-<div id="backlog-list" class="drop-zone space-y-2 mb-8 min-h-16 rounded-xl" data-section="backlog"
-     style="{% if not backlog_tasks %}border:2px dashed #1e293b;padding:2rem 1rem;{% endif %}">
-  {% if backlog_tasks %}
-    {% for task in backlog_tasks %}
-      <div class="task-card rounded-xl px-4 py-3 transition"
-           draggable="true"
-           data-task-id="{{ task.id }}"
-           data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
-           style="background:#0a0f1a;border:1px solid #1e293b;opacity:0.8;">
-        <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              {{ priority_dot(task.priority) }}
-              <a href="/task/{{ task.id }}" class="font-medium transition truncate"
-                 style="color:#94a3b8;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#94a3b8'">{{ task.title }}</a>
-              {{ status_badge(task.status) }}
-              <span class="text-xs" style="color:#334155;">{{ task.size }}</span>
-              {% if task.product_area %}
-                <span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f172a;color:#475569;">{{ task.product_area }}</span>
+
+{# ══════════════════════════════════════════════════════════════════
+   MOBILE STACKED VIEW  (below lg)
+   ══════════════════════════════════════════════════════════════════ #}
+<div class="lg:hidden" id="mobile-view">
+
+  <!-- Active tasks -->
+  {% if active_tasks %}
+    <div class="space-y-2 mb-8 drop-zone min-h-8" id="task-list" data-section="active">
+      {% for task in active_tasks %}
+        <div class="task-card rounded-xl px-4 py-3 transition {% if task.status == 'in_progress' %}in-progress-glow{% endif %}"
+             draggable="true"
+             data-task-id="{{ task.id }}"
+             data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
+             style="background:#0f172a;border:1px solid {% if task.status == 'in_progress' %}rgba(99,102,241,0.5){% elif task.status == 'blocked' %}rgba(245,158,11,0.25){% else %}#1e293b{% endif %};">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                {{ priority_dot(task.priority) }}
+                <a href="/task/{{ task.id }}" class="font-medium transition truncate"
+                   style="color:#e2e8f0;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#e2e8f0'">{{ task.title }}</a>
+                {{ status_badge(task.status) }}
+                <span class="text-xs" style="color:#475569;">{{ task.size }}</span>
+                {% if task.work_location == 'remote' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f2b2b;color:#34d399;">remote</span>
+                {% elif task.work_location == 'office' %}<span class="text-xs px-1.5 py-0.5 rounded" style="background:#1f1b0a;color:#fbbf24;">office</span>
+                {% endif %}
+                {% if task.product_area %}
+                  <span class="text-xs px-1.5 py-0.5 rounded" style="background:#1e293b;color:#64748b;">{{ task.product_area }}</span>
+                {% endif %}
+              </div>
+              {% if task.deadline %}
+                <div class="text-xs mt-1" style="color:#475569;">Due {{ task.deadline.strftime('%b %d') }}</div>
+              {% endif %}
+              {% if task.waiting_on and task.status == 'blocked' %}
+                <div class="text-xs mt-1" style="color:#fbbf24;">Waiting on: {{ task.waiting_on }}</div>
               {% endif %}
             </div>
-            {% if task.deadline %}
-              <div class="text-xs mt-1" style="color:#334155;">Due {{ task.deadline.strftime('%b %d') }}</div>
-            {% endif %}
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <a href="/task/{{ task.id }}/edit" class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e293b;color:#64748b;"
-               onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#64748b'">Edit</a>
+            <!-- Quick actions -->
+            <div class="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+              {% if task.status != 'in_progress' %}
+                <form method="POST" action="/task/{{ task.id }}/quick-status">
+                  <input type="hidden" name="status" value="in_progress" />
+                  <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e3a5f;color:#60a5fa;"
+                          onmouseover="this.style.background='#1e4976'" onmouseout="this.style.background='#1e3a5f'">Start</button>
+                </form>
+              {% endif %}
+              {% if task.status != 'blocked' %}
+                <form method="POST" action="/task/{{ task.id }}/quick-status">
+                  <input type="hidden" name="status" value="blocked" />
+                  <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#2d1f0a;color:#fbbf24;"
+                          onmouseover="this.style.background='#3d2b0e'" onmouseout="this.style.background='#2d1f0a'">Block</button>
+                </form>
+              {% endif %}
+              <form method="POST" action="/task/{{ task.id }}/quick-status">
+                <input type="hidden" name="status" value="done" />
+                <button class="text-xs px-2 py-1 rounded-lg transition" style="background:#0a2d1a;color:#34d399;"
+                        onmouseover="this.style.background='#0e3d23'" onmouseout="this.style.background='#0a2d1a'">Done ✓</button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
   {% else %}
-    <div class="text-center text-sm" style="color:#334155;">Drop tasks here to park them for later.</div>
+    <div id="active-drop-empty" class="drop-zone rounded-xl py-8 text-center text-sm mb-8" data-section="active"
+         style="color:#475569;border:2px dashed #1e293b;">
+      No active tasks — drag one up from the backlog, or
+      <a href="/task/new" style="color:#6366f1;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#6366f1'">add one</a>.
+    </div>
   {% endif %}
-</div>
 
-<!-- Completed today -->
-{% if completed_today %}
-  <div class="mb-2">
-    <h2 class="text-sm font-semibold" style="color:#34d399;">Completed Today ({{ completed_today|length }})</h2>
+  <!-- Backlog section -->
+  <div class="mb-3 flex items-center justify-between">
+    <h2 class="font-semibold" style="color:#64748b;">Backlog</h2>
+    <span class="text-xs" style="color:#334155;">{{ backlog_tasks|length }} task{{ 's' if backlog_tasks|length != 1 }}</span>
   </div>
-  <div class="space-y-1">
-    {% for task in completed_today %}
-      <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background:#0a1f12;border:1px solid #14532d;">
-        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#34d399" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-        </svg>
-        <a href="/task/{{ task.id }}" class="text-sm transition" style="color:#86efac;"
-           onmouseover="this.style.color='#4ade80'" onmouseout="this.style.color='#86efac'">{{ task.title }}</a>
-        {% if task.completed_at %}
-          <span class="text-xs ml-auto" style="color:#166534;">{{ task.completed_at.strftime('%H:%M') }}</span>
-        {% endif %}
-      </div>
-    {% endfor %}
+
+  <div id="backlog-list" class="drop-zone space-y-2 mb-8 min-h-16 rounded-xl" data-section="backlog"
+       style="{% if not backlog_tasks %}border:2px dashed #1e293b;padding:2rem 1rem;{% endif %}">
+    {% if backlog_tasks %}
+      {% for task in backlog_tasks %}
+        <div class="task-card rounded-xl px-4 py-3 transition"
+             draggable="true"
+             data-task-id="{{ task.id }}"
+             data-category="{{ task.product_area.split(':')[0].strip() if task.product_area else '' }}"
+             style="background:#0a0f1a;border:1px solid #1e293b;opacity:0.8;">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                {{ priority_dot(task.priority) }}
+                <a href="/task/{{ task.id }}" class="font-medium transition truncate"
+                   style="color:#94a3b8;" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#94a3b8'">{{ task.title }}</a>
+                {{ status_badge(task.status) }}
+                <span class="text-xs" style="color:#334155;">{{ task.size }}</span>
+                {% if task.product_area %}
+                  <span class="text-xs px-1.5 py-0.5 rounded" style="background:#0f172a;color:#475569;">{{ task.product_area }}</span>
+                {% endif %}
+              </div>
+              {% if task.deadline %}
+                <div class="text-xs mt-1" style="color:#334155;">Due {{ task.deadline.strftime('%b %d') }}</div>
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <a href="/task/{{ task.id }}/edit" class="text-xs px-2 py-1 rounded-lg transition" style="background:#1e293b;color:#64748b;"
+                 onmouseover="this.style.color='#94a3b8'" onmouseout="this.style.color='#64748b'">Edit</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center text-sm" style="color:#334155;">Drop tasks here to park them for later.</div>
+    {% endif %}
   </div>
-{% endif %}
+
+  <!-- Completed today -->
+  {% if completed_today %}
+    <div class="mb-2">
+      <h2 class="text-sm font-semibold" style="color:#34d399;">Completed Today ({{ completed_today|length }})</h2>
+    </div>
+    <div class="space-y-1">
+      {% for task in completed_today %}
+        {{ completed_card(task) }}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+</div>
 
 {% endblock %}
 
@@ -198,7 +345,7 @@
 <script>
 (function() {
   // ── Category filter pills ──────────────────────────────────────
-  const cards = document.querySelectorAll('.task-card');
+  const cards = document.querySelectorAll('.task-card, .kanban-card');
   const pills = document.querySelectorAll('.category-pill');
 
   const presentCats = new Set();
@@ -249,10 +396,10 @@
     }
   }
 
-  // ── Drag and drop between Active and Backlog ───────────────────
+  // ── Kanban drag and drop (desktop) ─────────────────────────────
   let draggedCard = null;
 
-  document.querySelectorAll('.task-card[draggable]').forEach(card => {
+  document.querySelectorAll('.kanban-card[draggable]').forEach(card => {
     card.addEventListener('dragstart', e => {
       draggedCard = card;
       setTimeout(() => card.style.opacity = '0.4', 0);
@@ -261,6 +408,76 @@
     card.addEventListener('dragend', () => {
       if (draggedCard) draggedCard.style.opacity = '';
       draggedCard = null;
+      document.querySelectorAll('.kanban-drop-zone').forEach(z => z.style.outline = '');
+    });
+  });
+
+  document.querySelectorAll('.kanban-drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.style.outline = '2px dashed #6366f1';
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) zone.style.outline = '';
+    });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.style.outline = '';
+      if (!draggedCard) return;
+
+      const targetStatus = zone.dataset.kanbanStatus;
+      const taskId = draggedCard.dataset.taskId;
+      if (!targetStatus || !taskId) return;
+
+      // Map kanban column to the backend action
+      if (targetStatus === 'backlog') {
+        // Move to backlog
+        fetch(`/task/${taskId}/move`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({section: 'backlog'})
+        }).then(r => r.json()).then(data => { if (data.ok) location.reload(); });
+      } else if (targetStatus === 'done') {
+        // Mark done
+        const form = new FormData();
+        form.append('status', 'done');
+        fetch(`/task/${taskId}/quick-status`, {
+          method: 'POST',
+          body: form
+        }).then(() => location.reload());
+      } else {
+        // Move to active section with new status
+        // First ensure it's in the active section (not backlog)
+        fetch(`/task/${taskId}/move`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({section: 'active'})
+        }).then(r => r.json()).then(data => {
+          // Then update status
+          const form = new FormData();
+          form.append('status', targetStatus);
+          return fetch(`/task/${taskId}/quick-status`, {
+            method: 'POST',
+            body: form
+          });
+        }).then(() => location.reload());
+      }
+    });
+  });
+
+  // ── Mobile drag and drop (existing) ────────────────────────────
+  let mobileDragged = null;
+
+  document.querySelectorAll('#mobile-view .task-card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      mobileDragged = card;
+      setTimeout(() => card.style.opacity = '0.4', 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      if (mobileDragged) mobileDragged.style.opacity = '';
+      mobileDragged = null;
       document.querySelectorAll('.drop-zone').forEach(z => z.style.outline = '');
     });
   });
@@ -277,9 +494,9 @@
     zone.addEventListener('drop', e => {
       e.preventDefault();
       zone.style.outline = '';
-      if (!draggedCard) return;
+      if (!mobileDragged) return;
       const section = zone.dataset.section;
-      const taskId = draggedCard.dataset.taskId;
+      const taskId = mobileDragged.dataset.taskId;
       if (!section || !taskId) return;
 
       fetch(`/task/${taskId}/move`, {
