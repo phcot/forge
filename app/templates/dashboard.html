@@ -220,19 +220,34 @@
     pill.style.borderColor = '#4338ca';
   }
 
+  function applyFilter(cat) {
+    cards.forEach(card => {
+      if (cat === 'all' || card.dataset.category === cat) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
   pills.forEach(pill => {
     pill.addEventListener('click', () => {
       const cat = pill.dataset.category;
       setActive(pill);
-      cards.forEach(card => {
-        if (cat === 'all' || card.dataset.category === cat) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
+      applyFilter(cat);
+      localStorage.setItem('dashboard_category_filter', cat);
     });
   });
+
+  // Restore saved filter on page load
+  const saved = localStorage.getItem('dashboard_category_filter');
+  if (saved && saved !== 'all') {
+    const match = Array.from(pills).find(p => p.dataset.category === saved);
+    if (match && !match.classList.contains('hidden')) {
+      setActive(match);
+      applyFilter(saved);
+    }
+  }
 
   // ── Drag and drop between Active and Backlog ───────────────────
   let draggedCard = null;
