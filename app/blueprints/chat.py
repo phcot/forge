@@ -8,7 +8,8 @@ import json
 
 chat_bp = Blueprint('chat', __name__)
 
-MODEL = 'claude-opus-4-6'
+GENERAL_CHAT_MODEL = 'claude-sonnet-4-6'
+TASK_CHAT_MODEL = 'claude-opus-4-6'
 
 # Maximum number of recent messages to send to the API per call.
 # This prevents unbounded context growth and keeps token usage in check.
@@ -232,7 +233,7 @@ def send_general_message():
         try:
             # Initial streaming call
             with client.messages.stream(
-                model=MODEL,
+                model=GENERAL_CHAT_MODEL,
                 max_tokens=4096,
                 system=system_prompt,
                 messages=current_messages,
@@ -272,7 +273,7 @@ def send_general_message():
 
                 # Non-streaming follow-up avoids nested generator/stream complexity
                 follow_up = client.messages.create(
-                    model=MODEL,
+                    model=GENERAL_CHAT_MODEL,
                     max_tokens=1024,
                     system=system_prompt,
                     messages=current_messages,
@@ -327,7 +328,7 @@ def send_task_message(task_id):
         full_response = ''
         try:
             with client.messages.stream(
-                model=MODEL,
+                model=TASK_CHAT_MODEL,
                 max_tokens=1024,
                 system=system_prompt,
                 messages=messages
