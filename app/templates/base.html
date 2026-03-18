@@ -22,7 +22,7 @@
       color: #e2e8f0;
       touch-action: pan-x pan-y;
       padding-top: calc(52px + env(safe-area-inset-top));
-      /* Push content above fixed footer nav */
+      /* Push content above fixed footer nav (mobile only – desktop hides footer) */
       padding-bottom: calc(64px + env(safe-area-inset-bottom));
     }
 
@@ -90,7 +90,7 @@
     }
     #hamburger-menu.open { display: block; }
 
-    /* Footer nav */
+    /* Footer nav – hidden on desktop */
     #footer-nav {
       position: fixed;
       bottom: 0;
@@ -101,6 +101,28 @@
       padding-bottom: env(safe-area-inset-bottom);
       z-index: 10;
     }
+    @media (min-width: 1024px) {
+      #footer-nav { display: none; }
+      body { padding-bottom: 0 !important; }
+    }
+
+    /* Desktop glowing "+ New Task" button in top nav */
+    .desktop-new-task-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 18px;
+      border-radius: 9999px;
+      background: #6366f1;
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 0 16px rgba(99,102,241,0.5);
+      animation: glow-pulse 2.4s ease-in-out infinite;
+      transition: background 0.15s;
+    }
+    .desktop-new-task-btn:hover { background: #4f46e5; }
     .footer-nav-btn {
       display: flex;
       flex-direction: column;
@@ -147,8 +169,19 @@
   <nav style="background:#0f172a;border-bottom:1px solid #1e293b;padding-top:calc(0.75rem + env(safe-area-inset-top));" class="px-4 pb-3 flex items-center justify-between fixed top-0 left-0 right-0 z-10">
     <a href="/" class="font-bold text-lg tracking-tight" style="color:#818cf8;">Cockpit</a>
 
+    <!-- Desktop: centered "+ New Task" button -->
+    <div class="hidden lg:flex items-center justify-center absolute left-1/2 -translate-x-1/2">
+      <a href="/task/new" class="desktop-new-task-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New Task
+      </a>
+    </div>
+
     <!-- Desktop nav links (lg+) -->
     <div class="hidden lg:flex items-center gap-5">
+      <a href="/chat" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Chat</a>
       <a href="/checkin" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Check-in</a>
       <a href="/archive" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Archive</a>
       <a href="/learning" class="text-sm transition" style="color:#94a3b8;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">Insights</a>
