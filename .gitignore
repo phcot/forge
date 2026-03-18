@@ -61,6 +61,8 @@ desktop.ini
 *.png
 *.jpg
 *.jpeg
+# Exception: app icons needed for iOS/PWA
+!app/static/icon-*.png
 
 # Build artifacts
 *.mo
