@@ -163,14 +163,15 @@
       onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
       {% if task %}Save Changes{% else %}Create Task{% endif %}
     </button>
-    {% if task %}
-      <form method="POST" action="/task/{{ task.id }}/delete" onsubmit="return confirm('Delete this task?')">
-        <button type="submit" class="text-sm transition" style="color:#64748b;"
-                onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">Delete task</button>
-      </form>
-    {% endif %}
   </div>
 </form>
+
+{% if task %}
+  <form method="POST" action="/task/{{ task.id }}/delete" onsubmit="return confirm('Delete this task?')" class="mt-4">
+    <button type="submit" class="text-sm transition" style="color:#64748b;"
+            onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">Delete task</button>
+  </form>
+{% endif %}
 </div>
 
 {% if not task %}
