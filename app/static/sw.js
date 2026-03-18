@@ -1,4 +1,4 @@
-const CACHE = 'cockpit-v1';
+const CACHE = 'forge-v1';
 
 self.addEventListener('install', e => {
   self.skipWaiting();

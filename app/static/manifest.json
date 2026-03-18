@@ -1,6 +1,6 @@
 {
-  "name": "Cockpit",
-  "short_name": "Cockpit",
+  "name": "Forge",
+  "short_name": "Forge",
   "description": "Personal task management and AI coaching",
   "start_url": "/",
   "display": "standalone",
