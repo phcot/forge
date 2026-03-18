@@ -89,7 +89,7 @@
 {# ══════════════════════════════════════════════════════════════════
    DESKTOP KANBAN VIEW  (lg and up)
    ══════════════════════════════════════════════════════════════════ #}
-<div class="hidden lg:grid lg:grid-cols-5 gap-4 mb-8" id="kanban-board">
+<div class="hidden lg:grid lg:grid-cols-5 gap-4" id="kanban-board" style="flex:1;min-height:0;">
 
   {# ── Column: Backlog ──────────────────────────────────────────── #}
   <div class="kanban-col flex flex-col min-h-[200px]">
@@ -98,7 +98,7 @@
       <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e293b;color:#475569;">{{ backlog_tasks|length }}</span>
     </div>
     <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="backlog"
-         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 280px);">
+         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 160px);">
       {% for task in backlog_tasks %}
         {{ kanban_card(task, ghost=true) }}
       {% endfor %}
@@ -115,7 +115,7 @@
       <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e293b;color:#475569;">{{ not_started_tasks|length }}</span>
     </div>
     <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="not_started"
-         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 280px);">
+         style="background:#080b14;border:1px solid #1e293b;max-height:calc(100vh - 160px);">
       {% for task in not_started_tasks %}
         {{ kanban_card(task, ghost=false) }}
       {% endfor %}
@@ -132,7 +132,7 @@
       <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#1e3a5f;color:#60a5fa;">{{ in_progress_tasks|length }}</span>
     </div>
     <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="in_progress"
-         style="background:#080b14;border:1px solid rgba(99,102,241,0.2);max-height:calc(100vh - 280px);">
+         style="background:#080b14;border:1px solid rgba(99,102,241,0.2);max-height:calc(100vh - 160px);">
       {% for task in in_progress_tasks %}
         {{ kanban_card(task, ghost=false) }}
       {% endfor %}
@@ -149,7 +149,7 @@
       <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#2d1f0a;color:#fbbf24;">{{ blocked_tasks|length }}</span>
     </div>
     <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="blocked"
-         style="background:#080b14;border:1px solid rgba(245,158,11,0.15);max-height:calc(100vh - 280px);">
+         style="background:#080b14;border:1px solid rgba(245,158,11,0.15);max-height:calc(100vh - 160px);">
       {% for task in blocked_tasks %}
         {{ kanban_card(task, ghost=false) }}
       {% endfor %}
@@ -166,7 +166,7 @@
       <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:#0a2d1a;color:#34d399;">{{ completed_today|length }}</span>
     </div>
     <div class="kanban-drop-zone flex-1 space-y-2 rounded-xl p-2 overflow-y-auto" data-kanban-status="done"
-         style="background:#080b14;border:1px solid rgba(52,211,153,0.15);max-height:calc(100vh - 280px);">
+         style="background:#080b14;border:1px solid rgba(52,211,153,0.15);max-height:calc(100vh - 160px);">
       {% for task in completed_today %}
         {{ completed_card(task) }}
       {% endfor %}
