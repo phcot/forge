@@ -9,7 +9,7 @@ class Config:
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///cockpit.db')
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///forge.db')
     # Railway gives postgres:// but SQLAlchemy needs postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)

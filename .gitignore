@@ -31,6 +31,7 @@ ENV/
 # Flask / SQLite
 instance/
 cockpit.db
+forge.db
 *.sqlite3
 
 # Flask-Migrate (keep migrations/ but ignore pycache inside)
